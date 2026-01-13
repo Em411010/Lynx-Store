@@ -1,0 +1,12 @@
+{
+  "name": "lynx-sarisari-store",
+  "version": "1.0.0",
+  "description": "Lynx's Sari-sari Store - Full Stack Application",
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build && cd ../backend && npm install",
+    "start": "cd backend && NODE_ENV=production node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

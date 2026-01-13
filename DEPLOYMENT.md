@@ -21,9 +21,9 @@ git push -u origin main
 
 **Build Settings:**
 - **Name**: lynx-sarisari-store
-- **Root Directory**: `backend`
-- **Build Command**: `npm install && npm run build`
-- **Start Command**: `NODE_ENV=production npm start`
+- **Root Directory**: (leave empty - use root)
+- **Build Command**: `npm run build`
+- **Start Command**: `npm start`
 
 **Environment Variables:**
 Add these in the Render dashboard:
