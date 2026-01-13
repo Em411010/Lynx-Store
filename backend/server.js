@@ -26,10 +26,7 @@ app.use('/api/auth', authRoutes);
 // Serve static files from React app in production
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../frontend/dist')));
-  app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
-  });
-  app.get('/:catchAll(*)', (req, res) => {
+  app.use((req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
   });
 } else {
