@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import logo from '../assets/Fedora_Logo.png';
+import ThemeToggle from '../components/ThemeToggle';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -69,6 +70,9 @@ const LoginPage = () => {
 
   return (
     <div className="min-h-screen bg-base-200 flex items-center justify-center px-4">
+      <div className="fixed top-4 right-4 z-50">
+        <ThemeToggle />
+      </div>
       <div className="card w-full max-w-md bg-base-100 shadow-xl">
         <div className="card-body">
           <div className="flex flex-col items-center mb-6">

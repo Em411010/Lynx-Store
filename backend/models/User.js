@@ -30,6 +30,21 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['admin', 'staff', 'customer'],
     default: 'customer'
+  },
+  phone: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  address: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  creditLimit: {
+    type: Number,
+    default: 0,
+    min: 0
   }
 }, {
   timestamps: true

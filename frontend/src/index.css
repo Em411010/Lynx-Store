@@ -1,3 +1,140 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Print styles for PDF export */
+@media print {
+  /* Hide navigation and unnecessary UI elements */
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Full-width content area when sidebar is hidden */
+  .flex-1 {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+
+  /* Hide the flex container scroll constraints */
+  .overflow-y-auto {
+    overflow: visible !important;
+  }
+
+  .max-h-screen {
+    max-height: none !important;
+  }
+
+  /* Show elements only in print */
+  .print\:block {
+    display: block !important;
+  }
+
+  /* Optimize page layout for printing */
+  body {
+    margin: 0;
+    padding: 20px;
+    background: white;
+    color: black;
+  }
+
+  /* Ensure content fits well on page */
+  .card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Optimize table printing */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  table th,
+  table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+  }
+
+  table thead {
+    background-color: #f3f4f6;
+  }
+
+  /* Force background colors for cards */
+  .card,
+  .bg-base-100,
+  .bg-base-200 {
+    background-color: #f9fafb !important;
+    border: 1px solid #e5e7eb;
+  }
+
+  /* Print gradient cards properly with colors */
+  .bg-gradient-to-br {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    color-adjust: exact;
+  }
+
+  /* Preserve badge colors */
+  .badge {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Page breaks */
+  .page-break-before {
+    page-break-before: always;
+  }
+
+  .page-break-after {
+    page-break-after: always;
+  }
+
+  /* Ensure proper spacing */
+  .space-y-3 > * + * {
+    margin-top: 0.75rem !important;
+  }
+
+  .space-y-4 > * + * {
+    margin-top: 1rem !important;
+  }
+
+  /* Add header/footer when printing */
+  @page {
+    margin: 1.5cm;
+    size: A4;
+  }
+
+  /* Header for printed pages */
+  h1, h2 {
+    color: #1f2937;
+  }
+
+  /* Ensure grid layouts work in print */
+  .grid {
+    display: grid !important;
+  }
+
+  /* Maintain padding in print */
+  .p-3, .p-4 {
+    padding: 0.75rem !important;
+  }
+
+  /* Ensure charts/SVG render in print */
+  svg {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Recharts responsive container */
+  .recharts-responsive-container {
+    width: 100% !important;
+    height: 400px !important;
+  }
+
+  .recharts-wrapper {
+    margin: 0 auto;
+  }
+}

@@ -5,6 +5,14 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import connectDB from './config/db.js';
 import authRoutes from './routes/auth.js';
+import productRoutes from './routes/products.js';
+import categoryRoutes from './routes/categories.js';
+import transactionRoutes from './routes/transactions.js';
+import debtRoutes from './routes/debts.js';
+import reportRoutes from './routes/reports.js';
+import userRoutes from './routes/users.js';
+import feedbackRoutes from './routes/feedback.js';
+import ticketRoutes from './routes/tickets.js';
 
 dotenv.config();
 
@@ -22,6 +30,14 @@ connectDB();
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/transactions', transactionRoutes);
+app.use('/api/debts', debtRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/feedback', feedbackRoutes);
+app.use('/api/tickets', ticketRoutes);
 
 // Serve static files from React app in production
 if (process.env.NODE_ENV === 'production') {

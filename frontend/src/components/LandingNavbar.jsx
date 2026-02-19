@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import logo from '../assets/Fedora_Logo.png';
+import ThemeToggle from './ThemeToggle';
 
 const LandingNavbar = () => {
   return (
@@ -11,6 +12,7 @@ const LandingNavbar = () => {
         </Link>
       </div>
       <div className="flex-none gap-2">
+        <ThemeToggle />
         <Link to="/login">
           <button className="btn btn-ghost">Login</button>
         </Link>
