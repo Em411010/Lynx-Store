@@ -293,15 +293,15 @@ const StaffDashboard = () => {
         )}
 
         {activeTab === 'pos' && (
-          <div className="flex h-screen">
-            <div className="flex-1 p-4 overflow-y-auto">
-              <h2 className="text-xl font-bold mb-3">🛒 Point of Sale</h2>
+          <div className="flex flex-col lg:flex-row lg:h-screen">
+            <div className="flex-1 p-2 md:p-4 overflow-y-auto">
+              <h2 className="text-lg md:text-xl font-bold mb-3"><span className="text-base md:text-xl">🛒</span> Point of Sale</h2>
               <div className="flex gap-2 mb-2 flex-wrap">
                 <input type="text" placeholder="🔍 Search product name..."
                   value={posSearch} onChange={e => setPosSearch(e.target.value)}
-                  className="input input-bordered input-sm flex-1 min-w-48" />
+                  className="input input-bordered input-xs md:input-sm flex-1 min-w-[150px]" />
                 <select value={posCategory} onChange={e => setPosCategory(e.target.value)}
-                  className="select select-bordered select-sm">
+                  className="select select-bordered select-xs md:select-sm">
                   <option value="">All</option>
                   {categories.map(c => <option key={c._id} value={c._id}>{c.icon} {c.name}</option>)}
                 </select>
@@ -309,37 +309,37 @@ const StaffDashboard = () => {
               <div className="flex gap-2 mb-3">
                 <input
                   type="text"
-                  placeholder="📈 Scan or type barcode → press Enter to add"
+                  placeholder="📈 Scan or type barcode..."
                   value={barcodeInput}
                   onChange={e => setBarcodeInput(e.target.value)}
                   onKeyDown={handleBarcodeInput}
-                  className="input input-bordered input-sm flex-1 bg-warning/10 border-warning"
+                  className="input input-bordered input-xs md:input-sm flex-1 bg-warning/10 border-warning text-[10px] md:text-sm"
                 />
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2">
                 {products.filter(p => p.stock > 0).map(p => (
                   <div key={p._id} className={`card bg-base-100 shadow-sm cursor-pointer hover:shadow-md transition-shadow ${p.isLowStock ? 'border border-warning' : ''}`}>
-                    <div className="card-body p-3">
-                      <div className="text-xs opacity-60">{p.category?.icon} {p.category?.name}</div>
-                      <h3 className="font-semibold text-sm leading-tight">{p.name}</h3>
-                      {p.brand && <div className="text-xs opacity-50">{p.brand}</div>}
+                    <div className="card-body p-2 md:p-3">
+                      <div className="text-[9px] md:text-xs opacity-60">{p.category?.icon} {p.category?.name}</div>
+                      <h3 className="font-semibold text-[10px] md:text-sm leading-tight truncate">{p.name}</h3>
+                      {p.brand && <div className="text-[8px] md:text-xs opacity-50 truncate">{p.brand}</div>}
                       <div className="flex justify-between items-end mt-1">
                         <div>
-                          <div className="text-primary font-bold">{formatPeso(p.unitPrice)}</div>
+                          <div className="text-primary font-bold text-xs md:text-base">{formatPeso(p.unitPrice)}</div>
                           {p.tingiPrice > 0 && (
-                            <div className="text-xs text-secondary">Tingi: {formatPeso(p.tingiPrice)}/{p.tingiUnit}</div>
+                            <div className="text-[8px] md:text-xs text-secondary">Tingi: {formatPeso(p.tingiPrice)}/{p.tingiUnit}</div>
                           )}
                         </div>
-                        <span className={`badge badge-xs ${p.isLowStock ? 'badge-warning' : 'badge-ghost'}`}>
-                          {p.stock} {p.unit}
+                        <span className={`badge badge-[9px] md:badge-xs ${p.isLowStock ? 'badge-warning' : 'badge-ghost'}`}>
+                          {p.stock}
                         </span>
                       </div>
                       <div className="flex gap-1 mt-2">
-                        <button onClick={() => addToCart(p)} className="btn btn-xs btn-primary flex-1">
-                          + Full pack
+                        <button onClick={() => addToCart(p)} className="btn btn-[8px] md:btn-xs btn-primary flex-1 h-auto py-1 min-h-0">
+                          + Full
                         </button>
                         {p.tingiPrice > 0 && (
-                          <button onClick={() => addToCart(p, true)} className="btn btn-xs btn-secondary flex-1">
+                          <button onClick={() => addToCart(p, true)} className="btn btn-[8px] md:btn-xs btn-secondary flex-1 h-auto py-1 min-h-0">
                             + Tingi
                           </button>
                         )}
@@ -348,45 +348,45 @@ const StaffDashboard = () => {
                   </div>
                 ))}
                 {products.filter(p => p.stock > 0).length === 0 && (
-                  <div className="col-span-full text-center py-8 opacity-60">
+                  <div className="col-span-full text-center py-8 opacity-60 text-xs shadow-inner bg-base-200/50 rounded-xl">
                     No products available
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="w-80 bg-base-100 shadow-xl flex flex-col border-l border-base-300">
-              <div className="p-3 border-b border-base-300">
-                <h3 className="font-bold text-lg">🧾 Cart ({cart.length})</h3>
+            <div className="w-full lg:w-72 xl:w-80 bg-base-100 shadow-xl flex flex-col border-t lg:border-t-0 lg:border-l border-base-300">
+              <div className="p-2 md:p-3 border-b border-base-300 flex justify-between items-center">
+                <h3 className="font-bold text-sm md:text-lg">🧾 Cart ({cart.length})</h3>
+                {cart.length > 0 && <button onClick={() => setCart([])} className="btn btn-xs btn-ghost text-error">Clear</button>}
               </div>
 
-              <div className="flex-1 overflow-y-auto p-3">
+              <div className="max-h-[300px] lg:max-h-full lg:flex-1 overflow-y-auto p-2 md:p-3">
                 {cart.length === 0 ? (
                   <div className="text-center py-8 opacity-40">
-                    <span className="text-4xl">🛒</span>
-                    <p className="mt-2">Cart is empty</p>
-                    <p className="text-xs">Click a product to add it</p>
+                    <span className="text-2xl md:text-4xl">🛒</span>
+                    <p className="mt-1 text-xs md:text-sm">Cart is empty</p>
                   </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     {cart.map(item => (
-                      <div key={item.cartKey} className="bg-base-200 rounded-lg p-2">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <div className="text-sm font-semibold">{item.productName}</div>
-                            <div className="text-xs opacity-60">{formatPeso(item.unitPrice)} each</div>
+                      <div key={item.cartKey} className="bg-base-200 rounded-lg p-1.5 md:p-2">
+                        <div className="flex justify-between items-start mb-0.5">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[10px] md:text-sm font-semibold truncate">{item.productName}</div>
+                            <div className="text-[9px] md:text-xs opacity-60">{formatPeso(item.unitPrice)} each</div>
                           </div>
-                          <button onClick={() => removeFromCart(item.cartKey)} className="btn btn-xs btn-ghost text-error">✕</button>
+                          <button onClick={() => removeFromCart(item.cartKey)} className="btn btn-xs btn-ghost text-error h-auto min-h-0 p-1">✕</button>
                         </div>
-                        <div className="flex items-center justify-between mt-1">
+                        <div className="flex items-center justify-between mt-0.5">
                           <div className="flex items-center gap-1">
                             <button onClick={() => updateCartQty(item.cartKey, item.quantity - 1)}
-                              className="btn btn-xs btn-circle btn-ghost">-</button>
-                            <span className="font-bold w-8 text-center">{item.quantity}</span>
+                              className="btn btn-xs btn-circle btn-ghost h-6 w-6 min-h-0">-</button>
+                            <span className="font-bold text-xs md:text-sm w-6 text-center">{item.quantity}</span>
                             <button onClick={() => updateCartQty(item.cartKey, item.quantity + 1)}
-                              className="btn btn-xs btn-circle btn-ghost">+</button>
+                              className="btn btn-xs btn-circle btn-ghost h-6 w-6 min-h-0">+</button>
                           </div>
-                          <span className="font-bold text-primary">{formatPeso(item.subtotal)}</span>
+                          <span className="font-bold text-primary text-xs md:text-sm">{formatPeso(item.subtotal)}</span>
                         </div>
                       </div>
                     ))}
@@ -394,8 +394,8 @@ const StaffDashboard = () => {
                 )}
               </div>
 
-              <div className="p-3 border-t border-base-300 space-y-2">
-                <div className="flex justify-between text-xl font-bold">
+              <div className="p-2 md:p-3 border-t border-base-300 space-y-2 bg-base-100">
+                <div className="flex justify-between text-base md:text-xl font-bold">
                   <span>TOTAL:</span>
                   <span className="text-primary">{formatPeso(cartTotal)}</span>
                 </div>
@@ -406,7 +406,7 @@ const StaffDashboard = () => {
                     { key: 'credit', label: '📋 Credit' }
                   ].map(pm => (
                     <button key={pm.key} onClick={() => setPaymentMethod(pm.key)}
-                      className={`btn btn-sm flex-1 ${paymentMethod === pm.key ? 'btn-primary' : 'btn-ghost'}`}>
+                      className={`btn btn-xs md:btn-sm flex-1 ${paymentMethod === pm.key ? 'btn-primary' : 'btn-ghost'}`}>
                       {pm.label}
                     </button>
                   ))}
@@ -416,9 +416,9 @@ const StaffDashboard = () => {
                   <div>
                     <input type="number" placeholder="Amount paid (₱)" value={cashReceived}
                       onChange={e => setCashReceived(e.target.value)}
-                      className="input input-bordered input-sm w-full" />
+                      className="input input-bordered input-xs md:input-sm w-full" />
                     {changeAmount > 0 && (
-                      <div className="text-right text-sm mt-1">
+                      <div className="text-right text-[10px] md:text-sm mt-1">
                         Change: <span className="font-bold text-success">{formatPeso(changeAmount)}</span>
                       </div>
                     )}
@@ -429,9 +429,9 @@ const StaffDashboard = () => {
                   <div>
                     <input type="text" placeholder="🔍 Search customer..." value={customerSearch}
                       onChange={e => { setCustomerSearch(e.target.value); loadCustomers(); }}
-                      className="input input-bordered input-sm w-full mb-1" />
+                      className="input input-bordered input-xs md:input-sm w-full mb-1" />
                     <select value={selectedCustomer} onChange={e => setSelectedCustomer(e.target.value)}
-                      className="select select-bordered select-sm w-full">
+                      className="select select-bordered select-xs md:select-sm w-full">
                       <option value="">Select customer</option>
                       {customers.map(c => (
                         <option key={c._id} value={c._id}>{c.firstName} {c.lastName}</option>
@@ -441,7 +441,7 @@ const StaffDashboard = () => {
                 )}
 
                 <button onClick={processTransaction}
-                  className="btn btn-success w-full"
+                  className="btn btn-sm md:btn-md btn-success w-full"
                   disabled={cart.length === 0}>
                   ✅ Process Sale
                 </button>
@@ -451,39 +451,37 @@ const StaffDashboard = () => {
         )}
 
         {activeTab === 'utang' && (
-          <div className="p-4">
+          <div className="p-2 md:p-4">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">📋 Debt List</h2>
-              <button onClick={() => { setShowAddDebtModal(true); loadCustomers(); }} className="btn btn-warning btn-sm">
+              <h2 className="text-lg md:text-xl font-bold"><span className="text-base md:text-xl">📋</span> Debt List</h2>
+              <button onClick={() => { setShowAddDebtModal(true); loadCustomers(); }} className="btn btn-warning btn-xs md:btn-sm">
                 + Add Debt
               </button>
             </div>
 
-            <div className="flex gap-2 mb-4">
-              <input type="text" placeholder="🔍 Search customer name..." value={debtSearch}
-                onChange={e => setDebtSearch(e.target.value)} className="input input-bordered input-sm w-64" />
+            <div className="flex gap-2 mb-3">
+              <input type="text" placeholder="🔍 Search..." value={debtSearch}
+                onChange={e => setDebtSearch(e.target.value)} className="input input-bordered input-xs md:input-sm flex-1 md:w-64" />
             </div>
 
-            <div className="flex gap-2 mb-4">
+            <div className="flex flex-wrap gap-1 mb-4">
               {['all', 'pending', 'partial', 'paid'].map(s => (
                 <button key={s} onClick={() => setDebtFilter(s)}
-                  className={`btn btn-sm ${debtFilter === s ? 'btn-primary' : 'btn-ghost'}`}>
+                  className={`btn btn-[10px] md:btn-sm ${debtFilter === s ? 'btn-primary' : 'btn-ghost'} h-auto py-1.5 min-h-0`}>
                   {s === 'all' ? 'All' : s === 'pending' ? 'Unpaid' : s === 'partial' ? 'Partial' : 'Paid'}
                 </button>
               ))}
             </div>
 
             <div className="overflow-x-auto bg-base-100 rounded-xl shadow">
-              <table className="table table-sm">
+              <table className="table table-[10px] md:table-sm">
                 <thead>
                   <tr>
                     <th>Customer</th>
-                    <th>Items / Description</th>
-                    <th>Total</th>
-                    <th>Amount Paid</th>
+                    <th className="hidden md:table-cell">Items</th>
                     <th>Remaining</th>
                     <th>Status</th>
-                    <th>Date</th>
+                    <th className="hidden sm:table-cell">Date</th>
                     <th>Action</th>
                   </tr>
                 </thead>
@@ -491,28 +489,26 @@ const StaffDashboard = () => {
                   {debts.map(d => (
                     <tr key={d._id} className={`cursor-pointer hover:bg-base-200 ${d.agingCategory === '60+ araw' ? 'bg-error/10' : ''}`}
                         onClick={() => { setSelectedDebt(d); setShowDebtDetailModal(true); }}>
-                      <td className="font-semibold">{d.customer?.firstName} {d.customer?.lastName}</td>
-                      <td className="text-xs max-w-48 truncate">
+                      <td className="font-semibold">{d.customer?.firstName}</td>
+                      <td className="text-[9px] max-w-24 truncate hidden md:table-cell">
                         {d.items.length > 0 ? d.items.map(i => `${i.productName} x${i.quantity}`).join(', ') : d.description || '-'}
                       </td>
-                      <td>{formatPeso(d.totalAmount)}</td>
-                      <td className="text-success">{formatPeso(d.paidAmount)}</td>
                       <td className="font-bold text-error">{formatPeso(d.remainingBalance)}</td>
                       <td>
-                        <span className={`badge badge-sm ${d.status === 'paid' ? 'badge-success' : d.status === 'partial' ? 'badge-warning' : 'badge-error'}`}>
-                          {d.status === 'paid' ? '✅ Paid' : d.status === 'partial' ? '⏳ Partial' : '❌ Pending'}
+                        <span className={`badge badge-[9px] md:badge-sm ${d.status === 'paid' ? 'badge-success' : d.status === 'partial' ? 'badge-warning' : 'badge-error'}`}>
+                          {d.status === 'paid' ? 'Paid' : d.status === 'partial' ? 'Partial' : 'Unpaid'}
                         </span>
                       </td>
-                      <td className="text-xs">{formatDate(d.createdAt)}</td>
+                      <td className="text-[9px] hidden sm:table-cell">{formatDate(d.createdAt)}</td>
                       <td onClick={(e) => e.stopPropagation()}>
                         {d.status !== 'paid' && (
-                          <button onClick={() => openPayModal(d)} className="btn btn-xs btn-success">💵 Pay</button>
+                          <button onClick={() => openPayModal(d)} className="btn btn-xs btn-success py-0 h-6 min-h-0">Pay</button>
                         )}
                       </td>
                     </tr>
                   ))}
                   {debts.length === 0 && (
-                    <tr><td colSpan="8" className="text-center py-8 opacity-60">No debt records</td></tr>
+                    <tr><td colSpan="6" className="text-center py-8 opacity-60 text-xs">No debt records</td></tr>
                   )}
                 </tbody>
               </table>
@@ -521,38 +517,37 @@ const StaffDashboard = () => {
         )}
 
         {activeTab === 'products' && (
-          <div className="p-4">
-            <h2 className="text-xl font-bold mb-3">📦 Products</h2>
+          <div className="p-2 md:p-4">
+            <h2 className="text-lg md:text-xl font-bold mb-3"><span className="text-base md:text-xl">📦</span> Products</h2>
             <div className="flex gap-2 mb-3">
               <input type="text" placeholder="🔍 Search..." value={posSearch}
-                onChange={e => setPosSearch(e.target.value)} className="input input-bordered input-sm w-64" />
+                onChange={e => setPosSearch(e.target.value)} className="input input-bordered input-xs md:input-sm flex-1 md:w-64" />
               <select value={posCategory} onChange={e => setPosCategory(e.target.value)}
-                className="select select-bordered select-sm">
-                  <option value="">All</option>
+                className="select select-bordered select-xs md:select-sm">
+                  <option value="">All Categories</option>
                 {categories.map(c => <option key={c._id} value={c._id}>{c.icon} {c.name}</option>)}
               </select>
             </div>
             <div className="overflow-x-auto bg-base-100 rounded-xl shadow">
-              <table className="table table-sm">
+              <table className="table table-[10px] md:table-sm">
                 <thead>
-                  <tr><th>Product</th><th>Category</th><th>Price</th><th>Tingi</th><th>Stock</th><th>Expiry</th></tr>
+                  <tr><th>Product</th><th className="hidden sm:table-cell">Category</th><th>Price</th><th>Stock</th><th className="hidden md:table-cell">Expiry</th></tr>
                 </thead>
                 <tbody>
                   {products.map(p => (
                     <tr key={p._id} className={p.isLowStock ? 'bg-warning/10' : ''}>
                       <td>
-                        <div className="font-semibold">{p.name}</div>
-                        {p.brand && <div className="text-xs opacity-60">{p.brand}</div>}
+                        <div className="font-semibold line-clamp-1">{p.name}</div>
+                        {p.brand && <div className="text-[9px] opacity-60 truncate">{p.brand}</div>}
                       </td>
-                      <td>{p.category?.icon} {p.category?.name}</td>
-                      <td>{formatPeso(p.unitPrice)}</td>
-                      <td>{p.tingiPrice > 0 ? `${formatPeso(p.tingiPrice)}/${p.tingiUnit}` : '-'}</td>
+                      <td className="hidden sm:table-cell">{p.category?.icon} {p.category?.name}</td>
+                      <td className="text-[10px] md:text-sm">{formatPeso(p.unitPrice)}</td>
                       <td>
-                        <span className={`badge badge-sm ${p.isLowStock ? 'badge-warning' : 'badge-success'}`}>
-                          {p.stock} {p.unit}
+                        <span className={`badge badge-[9px] md:badge-sm ${p.isLowStock ? 'badge-warning' : 'badge-success'}`}>
+                          {p.stock}
                         </span>
                       </td>
-                      <td className={p.isExpired ? 'text-error' : p.isNearExpiry ? 'text-warning' : ''}>
+                      <td className={`text-[9px] hidden md:table-cell ${p.isExpired ? 'text-error' : p.isNearExpiry ? 'text-warning' : ''}`}>
                         {p.expiryDate ? formatDate(p.expiryDate) : '-'}
                       </td>
                     </tr>
@@ -564,44 +559,38 @@ const StaffDashboard = () => {
         )}
 
         {activeTab === 'history' && (
-          <div className="p-4">
+          <div className="p-2 md:p-4">
             <div className="flex flex-wrap justify-between items-center gap-2 mb-3">
-              <h2 className="text-xl font-bold">📜 My Sales History</h2>
-              <div className="flex gap-2 flex-wrap">
-                <input type="text" placeholder="🔍 Search receipt #..." value={historyReceiptSearch}
+              <h2 className="text-lg md:text-xl font-bold"><span className="text-base md:text-xl">📜</span> My Sales</h2>
+              <div className="flex gap-1.5 flex-wrap">
+                <input type="text" placeholder="Receipt #" value={historyReceiptSearch}
                   onChange={e => setHistoryReceiptSearch(e.target.value)}
-                  className="input input-bordered input-sm w-44" />
+                  className="input input-bordered input-xs md:input-sm w-24 md:w-44" />
                 {!historyReceiptSearch && (
                   <input type="date" value={historyDateFilter}
                     onChange={e => setHistoryDateFilter(e.target.value)}
-                    className="input input-bordered input-sm" />
+                    className="input input-bordered input-xs md:input-sm" />
                 )}
-                <button onClick={loadMyTransactions} className="btn btn-ghost btn-sm">🔄</button>
+                <button onClick={loadMyTransactions} className="btn btn-ghost btn-xs md:btn-sm">🔄</button>
               </div>
             </div>
             <div className="overflow-x-auto bg-base-100 rounded-xl shadow">
-              <table className="table table-sm">
+              <table className="table table-[10px] md:table-sm">
                 <thead>
-                  <tr><th>Receipt</th><th>Customer</th><th>Items</th><th>Total</th><th>Payment</th><th>Time</th></tr>
+                  <tr><th>Receipt</th><th className="hidden sm:table-cell">Customer</th><th>Total</th><th>Time</th></tr>
                 </thead>
                 <tbody>
                   {myTransactions.map(t => (
                     <tr key={t._id} className="cursor-pointer hover:bg-base-200"
                         onClick={() => { setSelectedTransaction(t); setShowTransactionModal(true); }}>
-                      <td className="font-mono text-xs">{t.receiptNumber}</td>
-                      <td>{t.customer ? `${t.customer.firstName} ${t.customer.lastName}` : t.customerName}</td>
-                      <td className="text-xs">{t.items.map(i => `${i.productName} x${i.quantity}`).join(', ')}</td>
-                      <td className="font-bold">{formatPeso(t.totalAmount)}</td>
-                      <td>
-                        <span className={`badge badge-sm ${t.paymentMethod === 'cash' ? 'badge-success' : 'badge-warning'}`}>
-                          {t.paymentMethod === 'cash' ? '💵 Cash' : '📋 Utang'}
-                        </span>
-                      </td>
-                      <td className="text-xs">{formatDateTime(t.createdAt)}</td>
+                      <td className="font-mono text-[9px] md:text-xs">{t.receiptNumber}</td>
+                      <td className="hidden sm:table-cell truncate max-w-24">{t.customer ? `${t.customer.firstName}` : t.customerName}</td>
+                      <td className="font-bold text-[10px] md:text-sm">{formatPeso(t.totalAmount)}</td>
+                      <td className="text-[9px] md:text-xs opacity-60">{formatDateTime(t.createdAt).split(',')[1]}</td>
                     </tr>
                   ))}
                   {myTransactions.length === 0 && (
-                    <tr><td colSpan="6" className="text-center py-8 opacity-60">No sales yet today</td></tr>
+                    <tr><td colSpan="4" className="text-center py-8 opacity-60 text-xs">No sales yet</td></tr>
                   )}
                 </tbody>
               </table>

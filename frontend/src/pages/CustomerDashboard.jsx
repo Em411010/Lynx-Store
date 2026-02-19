@@ -148,59 +148,59 @@ const CustomerDashboard = () => {
 
         {activeTab === 'overview' && (
           <div>
-            <h2 className="text-2xl font-bold mb-6">Welcome, {user.firstName}! 👋</h2>
+            <h2 className="text-lg md:text-2xl font-bold mb-6">Welcome, {user.firstName}! <span className="text-base md:text-2xl">👋</span></h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div className="stat bg-base-100 rounded-xl shadow">
-                <div className="stat-title">Outstanding Debt</div>
-                <div className="stat-value text-error text-2xl">{formatPeso(totalUtang - totalBayad)}</div>
-                <div className="stat-desc">Remaining balance</div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+              <div className="stat bg-base-100 rounded-xl shadow p-2 md:p-4">
+                <div className="stat-title text-[10px] md:text-sm">Outstanding Debt</div>
+                <div className="stat-value text-error text-lg md:text-2xl">{formatPeso(totalUtang - totalBayad)}</div>
+                <div className="stat-desc text-[9px] md:text-xs">Remaining balance</div>
               </div>
-              <div className="stat bg-base-100 rounded-xl shadow">
-                <div className="stat-title">Total Paid</div>
-                <div className="stat-value text-success text-2xl">{formatPeso(totalBayad)}</div>
-                <div className="stat-desc">All time payments</div>
+              <div className="stat bg-base-100 rounded-xl shadow p-2 md:p-4">
+                <div className="stat-title text-[10px] md:text-sm">Total Paid</div>
+                <div className="stat-value text-success text-lg md:text-2xl">{formatPeso(totalBayad)}</div>
+                <div className="stat-desc text-[9px] md:text-xs">All time payments</div>
               </div>
-              <div className="stat bg-base-100 rounded-xl shadow">
-                <div className="stat-title">Purchases</div>
-                <div className="stat-value text-primary text-2xl">{myTransactions.length}</div>
-                <div className="stat-desc">Total transactions</div>
+              <div className="stat bg-base-100 rounded-xl shadow p-2 md:p-4">
+                <div className="stat-title text-[10px] md:text-sm">Purchases</div>
+                <div className="stat-value text-primary text-lg md:text-2xl">{myTransactions.length}</div>
+                <div className="stat-desc text-[9px] md:text-xs">Total transactions</div>
               </div>
             </div>
 
             {pendingDebts.length > 0 && (
-              <div className="alert alert-warning shadow-lg mb-6">
-                <div>
-                  <span className="text-xl">⚠️</span>
+              <div className="alert alert-warning shadow-lg mb-6 p-2 md:p-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-base md:text-xl">⚠️</span>
                   <div>
-                    <h3 className="font-bold">You have {pendingDebts.length} pending debts</h3>
-                    <div className="text-sm">Total remaining: {formatPeso(totalUtang - totalBayad)}</div>
+                    <h3 className="font-bold text-xs md:text-base">You have {pendingDebts.length} pending debts</h3>
+                    <div className="text-[10px] md:text-sm">Total remaining: {formatPeso(totalUtang - totalBayad)}</div>
                   </div>
                 </div>
-                <button onClick={() => setActiveTab('utang')} className="btn btn-sm btn-ghost">View →</button>
+                <button onClick={() => setActiveTab('utang')} className="btn btn-xs btn-ghost">View →</button>
               </div>
             )}
 
-            <div className="bg-base-100 rounded-xl shadow p-4 mb-6">
-              <h3 className="font-bold text-lg mb-3">📋 Recent Debts</h3>
+            <div className="bg-base-100 rounded-xl shadow p-3 md:p-4 mb-6">
+              <h3 className="font-bold text-sm md:text-lg mb-3"><span className="text-base md:text-lg">📋</span> Recent Debts</h3>
               {pendingDebts.length === 0 ? (
                 <div className="text-center py-6 opacity-60">
-                  <span className="text-3xl">✅</span>
-                  <p className="mt-2">No pending debts! Great job!</p>
+                  <span className="text-xl md:text-3xl">✅</span>
+                  <p className="mt-2 text-xs md:text-base">No pending debts! Great job!</p>
                 </div>
               ) : (
                 <div className="space-y-2">
                   {pendingDebts.slice(0, 5).map(d => (
-                    <div key={d._id} className="flex justify-between items-center bg-base-200 p-3 rounded-lg">
-                      <div>
-                        <div className="text-sm font-semibold">
+                    <div key={d._id} className="flex justify-between items-center bg-base-200 p-2 md:p-3 rounded-lg">
+                      <div className="max-w-[60%]">
+                        <div className="text-[10px] md:text-sm font-semibold truncate">
                           {d.items.length > 0 ? d.items.map(i => i.productName).join(', ') : d.description}
                         </div>
-                        <div className="text-xs opacity-60">{formatDate(d.createdAt)}</div>
+                        <div className="text-[9px] md:text-xs opacity-60">{formatDate(d.createdAt)}</div>
                       </div>
                       <div className="text-right">
-                        <div className="font-bold text-error">{formatPeso(d.remainingBalance)}</div>
-                        <span className={`badge badge-xs ${d.status === 'partial' ? 'badge-warning' : 'badge-error'}`}>
+                        <div className="font-bold text-error text-[11px] md:text-base">{formatPeso(d.remainingBalance)}</div>
+                        <span className={`badge badge-[9px] md:badge-xs ${d.status === 'partial' ? 'badge-warning' : 'badge-error'}`}>
                           {d.status === 'partial' ? 'Partial' : 'Unpaid'}
                         </span>
                       </div>
@@ -210,24 +210,24 @@ const CustomerDashboard = () => {
               )}
             </div>
 
-            <div className="bg-base-100 rounded-xl shadow p-4">
-              <h3 className="font-bold text-lg mb-3">📜 Recent Purchases</h3>
+            <div className="bg-base-100 rounded-xl shadow p-3 md:p-4">
+              <h3 className="font-bold text-sm md:text-lg mb-3"><span className="text-base md:text-lg">📜</span> Recent Purchases</h3>
               {myTransactions.length === 0 ? (
                 <div className="text-center py-6 opacity-60">
-                  <span className="text-3xl">🛒</span>
-                  <p className="mt-2">No purchases yet</p>
+                  <span className="text-xl md:text-3xl">🛒</span>
+                  <p className="mt-2 text-xs md:text-base">No purchases yet</p>
                 </div>
               ) : (
                 <div className="space-y-2">
                   {myTransactions.slice(0, 5).map(t => (
-                    <div key={t._id} className="flex justify-between items-center bg-base-200 p-3 rounded-lg">
-                      <div>
-                        <div className="text-sm">{t.items.map(i => `${i.productName} x${i.quantity}`).join(', ')}</div>
-                        <div className="text-xs opacity-60">{formatDateTime(t.createdAt)}</div>
+                    <div key={t._id} className="flex justify-between items-center bg-base-200 p-2 md:p-3 rounded-lg">
+                      <div className="max-w-[70%]">
+                        <div className="text-[10px] md:text-sm truncate">{t.items.map(i => `${i.productName} x${i.quantity}`).join(', ')}</div>
+                        <div className="text-[9px] md:text-xs opacity-60">{formatDateTime(t.createdAt)}</div>
                       </div>
                       <div className="text-right">
-                        <div className="font-bold">{formatPeso(t.totalAmount)}</div>
-                        <span className={`badge badge-xs ${t.paymentMethod === 'cash' ? 'badge-success' : 'badge-warning'}`}>
+                        <div className="font-bold text-[11px] md:text-base">{formatPeso(t.totalAmount)}</div>
+                        <span className={`badge badge-[9px] md:badge-xs ${t.paymentMethod === 'cash' ? 'badge-success' : 'badge-warning'}`}>
                           {t.paymentMethod === 'cash' ? '💵 Cash' : '📋 Utang'}
                         </span>
                       </div>
@@ -241,44 +241,44 @@ const CustomerDashboard = () => {
 
         {activeTab === 'utang' && (
           <div>
-            <h2 className="text-xl font-bold mb-4">📋 My Debts</h2>
+            <h2 className="text-base md:text-xl font-bold mb-4"><span className="text-lg md:text-xl">📋</span> My Debts</h2>
 
-            <div className="grid grid-cols-3 gap-3 mb-6">
-              <div className="bg-error/10 rounded-xl p-4 text-center">
-                <div className="text-xs opacity-60 mb-1">Remaining</div>
-                <div className="text-xl font-bold text-error">{formatPeso(totalUtang - totalBayad)}</div>
+            <div className="grid grid-cols-3 gap-2 md:gap-3 mb-6">
+              <div className="bg-error/10 rounded-xl p-2 md:p-4 text-center">
+                <div className="text-[9px] md:text-xs opacity-60 mb-1">Remaining</div>
+                <div className="text-sm md:text-xl font-bold text-error">{formatPeso(totalUtang - totalBayad)}</div>
               </div>
-              <div className="bg-warning/10 rounded-xl p-4 text-center">
-                <div className="text-xs opacity-60 mb-1">Total Debt</div>
-                <div className="text-xl font-bold text-warning">{formatPeso(totalUtang)}</div>
+              <div className="bg-warning/10 rounded-xl p-2 md:p-4 text-center">
+                <div className="text-[9px] md:text-xs opacity-60 mb-1">Total Debt</div>
+                <div className="text-sm md:text-xl font-bold text-warning">{formatPeso(totalUtang)}</div>
               </div>
-              <div className="bg-success/10 rounded-xl p-4 text-center">
-                <div className="text-xs opacity-60 mb-1">Paid</div>
-                <div className="text-xl font-bold text-success">{formatPeso(totalBayad)}</div>
+              <div className="bg-success/10 rounded-xl p-2 md:p-4 text-center">
+                <div className="text-[9px] md:text-xs opacity-60 mb-1">Paid</div>
+                <div className="text-sm md:text-xl font-bold text-success">{formatPeso(totalBayad)}</div>
               </div>
             </div>
 
             {pendingDebts.length > 0 && (
               <div className="mb-6">
-                <h3 className="font-semibold mb-2 text-error">❌ Unpaid / Partial ({pendingDebts.length})</h3>
+                <h3 className="font-semibold mb-2 text-error text-sm md:text-base">❌ Unpaid / Partial ({pendingDebts.length})</h3>
                 <div className="space-y-3">
                   {pendingDebts.map(d => (
-                    <div key={d._id} className="bg-base-100 rounded-xl shadow p-4">
+                    <div key={d._id} className="bg-base-100 rounded-xl shadow p-3 md:p-4">
                       <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <div className="font-semibold">
+                        <div className="max-w-[70%]">
+                          <div className="font-semibold text-xs md:text-base">
                             {d.items.length > 0 ? d.items.map(i => `${i.productName} x${i.quantity}`).join(', ') : d.description}
                           </div>
-                          <div className="text-xs opacity-60">{formatDate(d.createdAt)}</div>
+                          <div className="text-[10px] md:text-xs opacity-60">{formatDate(d.createdAt)}</div>
                         </div>
-                        <span className={`badge ${d.status === 'partial' ? 'badge-warning' : 'badge-error'}`}>
+                        <span className={`badge badge-xs md:badge-md ${d.status === 'partial' ? 'badge-warning' : 'badge-error'}`}>
                           {d.status === 'partial' ? '⏳ Partial' : '❌ Pending'}
                         </span>
                       </div>
-                      <div className="flex gap-4 text-sm">
+                      <div className="flex gap-2 md:gap-4 text-[10px] md:text-sm">
                         <div><span className="opacity-60">Debt:</span> <span className="font-bold">{formatPeso(d.totalAmount)}</span></div>
                         <div><span className="opacity-60">Paid:</span> <span className="text-success">{formatPeso(d.paidAmount)}</span></div>
-                        <div><span className="opacity-60">Remaining:</span> <span className="text-error font-bold">{formatPeso(d.remainingBalance)}</span></div>
+                        <div><span className="opacity-60">Rem:</span> <span className="text-error font-bold">{formatPeso(d.remainingBalance)}</span></div>
                       </div>
 
                       {/* Items breakdown */}

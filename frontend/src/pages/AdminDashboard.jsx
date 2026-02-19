@@ -464,10 +464,10 @@ const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen bg-base-200 flex">
-      <div className="w-1/4 md:w-56 bg-base-100 shadow-xl flex flex-col min-h-screen print:hidden">
-        <div className="p-4 border-b border-base-300">
-          <h2 className="font-bold text-xs md:text-lg">🏪 Lynx Store</h2>
-          <p className="text-[10px] md:text-xs opacity-60">Admin Panel</p>
+      <div className="w-1/4 md:w-56 bg-base-100 shadow-xl flex flex-col min-h-screen print:hidden overflow-hidden">
+        <div className="p-2 md:p-4 border-b border-base-300">
+          <h2 className="font-bold text-[10px] md:text-lg truncate">🏪 Lynx Store</h2>
+          <p className="text-[9px] md:text-xs opacity-60">Admin Panel</p>
         </div>
         <nav className="flex-1 p-1 md:p-2">
           {tabs.map(tab => (
@@ -517,36 +517,36 @@ const AdminDashboard = () => {
 
         {activeTab === 'dashboard' && dashboardStats && (
           <div>
-            <h1 className="text-2xl font-bold mb-6">Dashboard Overview</h1>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              <div className="stat bg-base-100 rounded-xl shadow">
-                <div className="stat-title">Today's Sales</div>
-                <div className="stat-value text-primary text-2xl">{formatPeso(dashboardStats.today.revenue)}</div>
-                <div className="stat-desc">{dashboardStats.today.totalSales} transactions</div>
+            <h1 className="text-lg md:text-2xl font-bold mb-4 md:mb-6">Dashboard Overview</h1>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4 mb-6">
+              <div className="stat bg-base-100 rounded-xl shadow p-2 md:p-4">
+                <div className="stat-title text-[10px] md:text-sm">Today's Sales</div>
+                <div className="stat-value text-primary text-base md:text-2xl">{formatPeso(dashboardStats.today.revenue)}</div>
+                <div className="stat-desc text-[9px] md:text-xs">{dashboardStats.today.totalSales} transactions</div>
               </div>
-              <div className="stat bg-base-100 rounded-xl shadow">
-                <div className="stat-title">Total Debts</div>
-                <div className="stat-value text-error text-2xl">{formatPeso(dashboardStats.debts.totalOutstanding)}</div>
-                <div className="stat-desc">{dashboardStats.debts.customersWithDebt} with debts</div>
+              <div className="stat bg-base-100 rounded-xl shadow p-2 md:p-4">
+                <div className="stat-title text-[10px] md:text-sm">Total Debts</div>
+                <div className="stat-value text-error text-base md:text-2xl">{formatPeso(dashboardStats.debts.totalOutstanding)}</div>
+                <div className="stat-desc text-[9px] md:text-xs">{dashboardStats.debts.customersWithDebt} with debts</div>
               </div>
-              <div className="stat bg-base-100 rounded-xl shadow">
-                <div className="stat-title">Products</div>
-                <div className="stat-value text-2xl">{dashboardStats.inventory.totalProducts}</div>
-                <div className="stat-desc">{dashboardStats.inventory.lowStockCount} low stock</div>
+              <div className="stat bg-base-100 rounded-xl shadow p-2 md:p-4">
+                <div className="stat-title text-[10px] md:text-sm">Products</div>
+                <div className="stat-value text-base md:text-2xl">{dashboardStats.inventory.totalProducts}</div>
+                <div className="stat-desc text-[9px] md:text-xs">{dashboardStats.inventory.lowStockCount} low stock</div>
               </div>
-              <div className="stat bg-base-100 rounded-xl shadow">
-                <div className="stat-title">Customers</div>
-                <div className="stat-value text-2xl">{dashboardStats.customers.total}</div>
-                <div className="stat-desc">Registered customers</div>
+              <div className="stat bg-base-100 rounded-xl shadow p-2 md:p-4">
+                <div className="stat-title text-[10px] md:text-sm">Customers</div>
+                <div className="stat-value text-base md:text-2xl">{dashboardStats.customers.total}</div>
+                <div className="stat-desc text-[9px] md:text-xs">Registered customers</div>
               </div>
             </div>
 
             <div className="grid lg:grid-cols-2 gap-4">
               {dashboardStats.today.cashSales > 0 || dashboardStats.today.creditSales > 0 ? (
                 <div className="card bg-base-100 shadow">
-                  <div className="card-body">
-                    <h3 className="card-title text-lg">💵 Today's Sales Breakdown</h3>
-                    <div className="space-y-2">
+                  <div className="card-body p-3 md:p-6">
+                    <h3 className="card-title text-sm md:text-lg">💵 Today's Sales Breakdown</h3>
+                    <div className="space-y-1 md:space-y-2 text-xs md:text-base">
                       <div className="flex justify-between"><span>Cash:</span><span className="font-bold text-success">{formatPeso(dashboardStats.today.cashSales)}</span></div>
                       <div className="flex justify-between"><span>Utang:</span><span className="font-bold text-warning">{formatPeso(dashboardStats.today.creditSales)}</span></div>
                     </div>
@@ -554,17 +554,17 @@ const AdminDashboard = () => {
                 </div>
               ) : (
                 <div className="card bg-base-100 shadow">
-                  <div className="card-body items-center text-center">
-                    <h3 className="text-lg">💵 Today's Sales</h3>
-                    <p className="opacity-60">No sales yet today</p>
+                  <div className="card-body items-center text-center p-3 md:p-6">
+                    <h3 className="text-sm md:text-lg">💵 Today's Sales</h3>
+                    <p className="opacity-60 text-xs md:text-sm">No sales yet today</p>
                   </div>
                 </div>
               )}
 
               <div className="card bg-base-100 shadow">
-                <div className="card-body">
-                  <h3 className="card-title text-lg">⚠️ Alerts</h3>
-                  <div className="space-y-2">
+                <div className="card-body p-3 md:p-6">
+                  <h3 className="card-title text-sm md:text-lg">⚠️ Alerts</h3>
+                  <div className="space-y-1 md:space-y-2 text-xs md:text-sm">
                     {dashboardStats.inventory.lowStockCount > 0 && (
                       <div className="flex items-center gap-2 text-warning">
                         <span>📦</span> <span>{dashboardStats.inventory.lowStockCount} products with low stock</span>
@@ -581,7 +581,7 @@ const AdminDashboard = () => {
                       </div>
                     )}
                     {dashboardStats.inventory.lowStockCount === 0 && dashboardStats.inventory.nearExpiryCount === 0 && dashboardStats.debts.pendingCount === 0 && (
-                      <p className="opacity-60">No alerts today! 🎉</p>
+                      <p className="opacity-60 text-xs md:text-sm">No alerts today! 🎉</p>
                     )}
                   </div>
                 </div>
@@ -815,18 +815,18 @@ const AdminDashboard = () => {
                     <div className="card-body p-5 print:p-3">
                       <h3 className="card-title text-lg print:text-sm">💵 Payment Methods Breakdown</h3>
                       <div className="space-y-3">
-                        <div className="flex justify-between items-center p-3 bg-success/10 rounded-lg">
-                          <span className="font-medium">💵 Cash</span>
+                        <div className="flex justify-between items-center p-2 md:p-3 bg-success/10 rounded-lg">
+                          <span className="font-medium text-xs md:text-base">💵 Cash</span>
                           <div className="text-right">
-                            <div className="font-bold text-lg">{formatPeso(salesAnalytics.cashTotal)}</div>
-                            <div className="text-xs opacity-60">{salesAnalytics.cashCount} transactions</div>
+                            <div className="font-bold text-sm md:text-lg">{formatPeso(salesAnalytics.cashTotal)}</div>
+                            <div className="text-[10px] md:text-xs opacity-60">{salesAnalytics.cashCount} txns</div>
                           </div>
                         </div>
-                        <div className="flex justify-between items-center p-3 bg-warning/10 rounded-lg">
-                          <span className="font-medium">📋 Credit (Utang)</span>
+                        <div className="flex justify-between items-center p-2 md:p-3 bg-warning/10 rounded-lg">
+                          <span className="font-medium text-xs md:text-base">📋 Credit</span>
                           <div className="text-right">
-                            <div className="font-bold text-lg">{formatPeso(salesAnalytics.creditTotal)}</div>
-                            <div className="text-xs opacity-60">{salesAnalytics.creditCount} transactions</div>
+                            <div className="font-bold text-sm md:text-lg">{formatPeso(salesAnalytics.creditTotal)}</div>
+                            <div className="text-[10px] md:text-xs opacity-60">{salesAnalytics.creditCount} txns</div>
                           </div>
                         </div>
                         <div className="flex justify-between items-center p-3 bg-info/10 rounded-lg">
@@ -1301,11 +1301,11 @@ const AdminDashboard = () => {
 
         {activeTab === 'activity' && (
           <div>
-            <h1 className="text-2xl font-bold mb-4">📝 Activity Log</h1>
-            <div className="flex gap-2 mb-4">
+            <h1 className="text-lg md:text-2xl font-bold mb-4">📝 Activity Log</h1>
+            <div className="flex gap-1 md:gap-2 mb-4 flex-wrap">
               {['', 'sale', 'inventory', 'debt', 'payment', 'user'].map(c => (
                 <button key={c} onClick={() => setActivityFilter(c)}
-                  className={`btn btn-sm ${activityFilter === c ? 'btn-primary' : 'btn-ghost'}`}>
+                  className={`btn btn-[10px] md:btn-sm ${activityFilter === c ? 'btn-primary' : 'btn-ghost'} h-auto py-1.5 min-h-0`}>
                   {c === '' ? 'All' : c === 'sale' ? '💰 Sales' : c === 'inventory' ? '📦 Inventory' : c === 'debt' ? '📋 Debts' : c === 'payment' ? '💵 Payments' : '👤 User'}
                 </button>
               ))}
@@ -1314,21 +1314,21 @@ const AdminDashboard = () => {
               {activityLogs.map(log => (
                 <div key={log._id} 
                   onClick={() => { setSelectedActivity(log); setShowActivityModal(true); }}
-                  className="card bg-base-100 shadow-sm p-3 flex flex-row items-center gap-3 cursor-pointer hover:bg-base-200 transition-colors">
-                  <span className="text-xl">
+                  className="card bg-base-100 shadow-sm p-2 md:p-3 flex flex-row items-center gap-2 md:gap-3 cursor-pointer hover:bg-base-200 transition-colors">
+                  <span className="text-base md:text-xl shrink-0">
                     {log.category === 'sale' ? '💰' : log.category === 'inventory' ? '📦' : log.category === 'debt' ? '📋' : log.category === 'payment' ? '💵' : '👤'}
                   </span>
-                  <div className="flex-1">
-                    <div className="font-semibold text-sm">{log.action}</div>
-                    <div className="text-xs opacity-60 truncate max-w-md">{log.details}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-xs md:text-sm truncate">{log.action}</div>
+                    <div className="text-[10px] md:text-xs opacity-60 truncate">{log.details}</div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-xs font-medium">{log.user?.firstName} {log.user?.lastName}</div>
-                    <div className="text-xs opacity-50">{formatDateTime(log.createdAt)}</div>
+                  <div className="text-right shrink-0">
+                    <div className="text-[10px] md:text-xs font-medium">{log.user?.firstName}</div>
+                    <div className="text-[9px] md:text-xs opacity-50">{formatDateTime(log.createdAt).split(',')[1]}</div>
                   </div>
                 </div>
               ))}
-              {activityLogs.length === 0 && <p className="text-center opacity-60 py-8">No activity logs</p>}
+              {activityLogs.length === 0 && <p className="text-center opacity-60 py-8 text-xs">No activity logs</p>}
             </div>
           </div>
         )}
