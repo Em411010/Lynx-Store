@@ -148,7 +148,7 @@ const CustomerDashboard = () => {
 
         {activeTab === 'overview' && (
           <div>
-            <h2 className="text-lg md:text-2xl font-bold mb-6">Welcome, {user.firstName}! <span className="text-base md:text-2xl">👋</span></h2>
+            <h2 className="text-lg md:text-2xl font-bold mb-6">Welcome, {user.firstName}!</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
               <div className="stat bg-base-100 rounded-xl shadow p-2 md:p-4">
@@ -171,7 +171,6 @@ const CustomerDashboard = () => {
             {pendingDebts.length > 0 && (
               <div className="alert alert-warning shadow-lg mb-6 p-2 md:p-4">
                 <div className="flex items-center gap-2">
-                  <span className="text-base md:text-xl">⚠️</span>
                   <div>
                     <h3 className="font-bold text-xs md:text-base">You have {pendingDebts.length} pending debts</h3>
                     <div className="text-[10px] md:text-sm">Total remaining: {formatPeso(totalUtang - totalBayad)}</div>
@@ -182,10 +181,9 @@ const CustomerDashboard = () => {
             )}
 
             <div className="bg-base-100 rounded-xl shadow p-3 md:p-4 mb-6">
-              <h3 className="font-bold text-sm md:text-lg mb-3"><span className="text-base md:text-lg">📋</span> Recent Debts</h3>
-              {pendingDebts.length === 0 ? (
+              <h3 className="font-bold text-sm md:text-lg mb-3">Recent Debts</h3>
+                {pendingDebts.length === 0 ? (
                 <div className="text-center py-6 opacity-60">
-                  <span className="text-xl md:text-3xl">✅</span>
                   <p className="mt-2 text-xs md:text-base">No pending debts! Great job!</p>
                 </div>
               ) : (
@@ -211,10 +209,9 @@ const CustomerDashboard = () => {
             </div>
 
             <div className="bg-base-100 rounded-xl shadow p-3 md:p-4">
-              <h3 className="font-bold text-sm md:text-lg mb-3"><span className="text-base md:text-lg">📜</span> Recent Purchases</h3>
-              {myTransactions.length === 0 ? (
+              <h3 className="font-bold text-sm md:text-lg mb-3">Recent Purchases</h3>
+                {myTransactions.length === 0 ? (
                 <div className="text-center py-6 opacity-60">
-                  <span className="text-xl md:text-3xl">🛒</span>
                   <p className="mt-2 text-xs md:text-base">No purchases yet</p>
                 </div>
               ) : (
@@ -228,7 +225,7 @@ const CustomerDashboard = () => {
                       <div className="text-right">
                         <div className="font-bold text-[11px] md:text-base">{formatPeso(t.totalAmount)}</div>
                         <span className={`badge badge-[9px] md:badge-xs ${t.paymentMethod === 'cash' ? 'badge-success' : 'badge-warning'}`}>
-                          {t.paymentMethod === 'cash' ? '💵 Cash' : '📋 Utang'}
+                          {t.paymentMethod === 'cash' ? 'Cash' : 'Utang'}
                         </span>
                       </div>
                     </div>
