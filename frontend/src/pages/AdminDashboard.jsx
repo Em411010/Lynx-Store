@@ -464,25 +464,25 @@ const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen bg-base-200 flex">
-      <div className="w-56 bg-base-100 shadow-xl flex flex-col min-h-screen print:hidden">
+      <div className="w-1/4 md:w-56 bg-base-100 shadow-xl flex flex-col min-h-screen print:hidden">
         <div className="p-4 border-b border-base-300">
-          <h2 className="font-bold text-lg">🏪 Lynx Store</h2>
-          <p className="text-xs opacity-60">Admin Panel</p>
+          <h2 className="font-bold text-xs md:text-lg">🏪 Lynx Store</h2>
+          <p className="text-[10px] md:text-xs opacity-60">Admin Panel</p>
         </div>
-        <nav className="flex-1 p-2">
+        <nav className="flex-1 p-1 md:p-2">
           {tabs.map(tab => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-              className={`w-full text-left px-3 py-2.5 rounded-lg mb-1 text-sm transition-all ${activeTab === tab.key ? 'bg-primary text-primary-content font-semibold' : 'hover:bg-base-200'}`}>
-              {tab.label}
+              className={`w-full text-left px-2 md:px-3 py-2 md:py-2.5 rounded-lg mb-1 text-[10px] md:text-sm transition-all ${activeTab === tab.key ? 'bg-primary text-primary-content font-semibold' : 'hover:bg-base-200'}`}>
+              <span className="md:inline">{tab.label}</span>
             </button>
           ))}
         </nav>
-        <div className="p-4 border-t border-base-300">
-          <p className="text-sm font-medium">{user.firstName}</p>
-          <p className="text-xs opacity-60 mb-2">Admin</p>
-          <div className="flex gap-1 mb-1">
-            <button onClick={handleLogout} className="btn btn-sm btn-ghost flex-1">Logout</button>
-            <ThemeToggle />
+        <div className="p-2 md:p-4 border-t border-base-300 overflow-hidden">
+          <p className="text-[10px] md:text-sm font-medium truncate">{user.firstName}</p>
+          <p className="text-[9px] md:text-xs opacity-60 mb-2">Admin</p>
+          <div className="flex flex-col md:flex-row gap-1 mb-1">
+            <button onClick={handleLogout} className="btn btn-[10px] md:btn-sm btn-ghost flex-1 py-1 h-auto min-h-0">Logout</button>
+            <ThemeToggle className="scale-75 md:scale-100" />
           </div>
         </div>
       </div>
