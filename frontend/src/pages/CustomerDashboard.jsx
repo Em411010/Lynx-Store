@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState, useCallback } from 'react';
+import { Menu, X } from 'lucide-react';
 import { api, formatPeso, formatDate, formatDateTime } from '../utils/api';
 import ThemeToggle from '../components/ThemeToggle';
 
@@ -7,6 +8,7 @@ const CustomerDashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Overview State
   const [myDebts, setMyDebts] = useState([]);
@@ -120,11 +122,20 @@ const CustomerDashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-base-200 flex">
-      <div className="w-1/4 md:w-52 bg-base-100 shadow-xl flex flex-col min-h-screen">
-        <div className="p-4 border-b border-base-300">
-          <h2 className="font-bold text-xs md:text-lg">🏪 Lynx Store</h2>
-          <p className="text-[10px] md:text-xs opacity-60">Customer</p>
+    <div className="min-h-screen bg-base-200 flex relative">
+      {/* Mobile sidebar overlay */}
+      {sidebarOpen && <div className="fixed inset-0 bg-black/50 md:hidden z-30" onClick={() => setSidebarOpen(false)}></div>}
+      
+      {/* Sidebar */}
+      <div className={`${ sidebarOpen ? 'fixed' : 'hidden' } md:static md:block w-52 bg-base-100 shadow-xl flex flex-col min-h-screen md:min-h-screen z-40 transition-all`}>
+        <div className="p-4 border-b border-base-300 flex items-center justify-between">
+          <div>
+            <h2 className="font-bold text-xs md:text-lg">🏪 Lynx Store</h2>
+            <p className="text-[10px] md:text-xs opacity-60">Customer</p>
+          </div>
+          <button onClick={() => setSidebarOpen(false)} className="md:hidden btn btn-ghost btn-sm">
+            <X size={20} />
+          </button>
         </div>
         <nav className="flex-1 p-1 md:p-2">
           {tabs.map(tab => (
@@ -144,7 +155,12 @@ const CustomerDashboard = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto max-h-screen p-6">
+      {/* Main Content */}
+      <div className="flex-1 overflow-y-auto max-h-screen p-6 relative">
+        {/* Mobile sidebar toggle button */}
+        <button onClick={() => setSidebarOpen(true)} className="md:hidden btn btn-ghost btn-sm mb-4" aria-label="Open sidebar">
+          <Menu size={24} />
+        </button>
 
         {activeTab === 'overview' && (
           <div>
