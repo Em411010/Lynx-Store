@@ -1,13 +1,16 @@
 import LandingNavbar from '../components/LandingNavbar';
+import FloatingEmojis from '../components/FloatingEmojis';
 import logo from '../assets/Fedora_Logo.png';
 
 const LandingPage = () => {
   return (
     <div className="min-h-screen bg-base-200">
-      <LandingNavbar />
+      <div className="relative z-50">
+        <LandingNavbar />
       
-      <div className="hero min-h-[calc(100vh-4rem)] bg-base-200">
-        <div className="hero-content text-center">
+      <div className="hero min-h-[calc(100vh-4rem)] bg-base-200 relative overflow-hidden">
+        <FloatingEmojis />
+        <div className="hero-content text-center relative z-10">
           <div className="max-w-2xl">
             <img 
               src={logo} 
@@ -87,6 +90,7 @@ const LandingPage = () => {
           <p>© 2026 Lynx's Sari-sari Store. All rights reserved.</p>
         </div>
       </footer>
+      </div>
     </div>
   );
 };
