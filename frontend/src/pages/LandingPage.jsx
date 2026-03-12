@@ -17,10 +17,10 @@ const LandingPage = () => {
               alt="Lynx's Sari-Sari Store POS and Sales System" 
               className="w-48 h-48 mx-auto mb-8 rounded-full shadow-2xl"
             />
-            <h1 className="text-5xl font-bold mb-4">Lynx's Sari-Sari Store POS and Sales System</h1>
-            <p className="text-2xl mb-2">Your Neighborhood Store, Now Online</p>
+            <h1 className="text-5xl font-bold mb-4">Lynx's Sari-Sari Store<br /><span className="text-3xl font-semibold">POS and Sales System</span></h1>
+            <p className="text-2xl mb-2">Fast. Simple. Reliable.</p>
             <p className="text-lg mb-8 opacity-80">
-              Shop your daily essentials from the comfort of your home
+              Manage sales, inventory, and reports — all in one place
             </p>
             <div className="flex gap-4 justify-center flex-wrap">
               <button className="btn btn-primary btn-lg">Shop Now</button>
