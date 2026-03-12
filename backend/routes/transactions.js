@@ -1,7 +1,6 @@
 import express from 'express';
 import Transaction from '../models/Transaction.js';
 import Product from '../models/Product.js';
-import Debt from '../models/Debt.js';
 import ActivityLog from '../models/ActivityLog.js';
 import { protect, authorize } from '../middleware/auth.js';
 
@@ -85,7 +84,7 @@ router.get('/:id', protect, async (req, res) => {
 // @access  Private (admin, staff)
 router.post('/', protect, authorize('admin', 'staff'), async (req, res) => {
   try {
-    const { items, customer, customerName, paymentMethod, cashReceived, creditAmount, notes } = req.body;
+    const { items, customer, customerName, paymentMethod, cashReceived, notes } = req.body;
 
     if (!items || items.length === 0) {
       return res.status(400).json({ message: 'Walang items sa cart' });
@@ -100,8 +99,16 @@ router.post('/', protect, authorize('admin', 'staff'), async (req, res) => {
       if (!product) {
         return res.status(400).json({ message: `Product not found: ${item.productName}` });
       }
-      if (product.stock < item.quantity && !item.isTingi) {
-        return res.status(400).json({ message: `Kulang ang stock ng ${product.name}. Available: ${product.stock}` });
+      if (item.isTingi) {
+        const tingiAvailable = Math.floor(product.stock * (product.tingiPerPack || 1));
+        if (item.quantity > tingiAvailable) {
+          return res.status(400).json({ message: `Kulang ang tingi stock ng ${product.name}. Available: ${tingiAvailable} tingi units` });
+        }
+      } else {
+        const wholeAvailable = Math.floor(product.stock);
+        if (item.quantity > wholeAvailable) {
+          return res.status(400).json({ message: `Kulang ang stock ng ${product.name}. Available: ${wholeAvailable}` });
+        }
       }
 
       const subtotal = item.unitPrice * item.quantity;
@@ -126,7 +133,6 @@ router.post('/', protect, authorize('admin', 'staff'), async (req, res) => {
       paymentMethod,
       cashReceived: cashReceived || 0,
       changeAmount: paymentMethod === 'cash' ? Math.max(0, (cashReceived || 0) - totalAmount) : 0,
-      creditAmount: creditAmount || 0,
       notes
     });
 
@@ -134,32 +140,12 @@ router.post('/', protect, authorize('admin', 'staff'), async (req, res) => {
     for (const item of processedItems) {
       const product = await Product.findById(item.product);
       if (item.isTingi) {
-        // For tingi, deduct from pack if quantity reaches tingiPerPack
-        // Simple approach: don't deduct whole pack stock for tingi sales
-        // Track tingi separately or deduct fractionally
-        product.stock = Math.max(0, product.stock - (item.quantity / (product.tingiPerPack || 1)));
+        const deduction = item.quantity / (product.tingiPerPack || 1);
+        product.stock = Math.max(0, Math.round((product.stock - deduction) * 10000) / 10000);
       } else {
         product.stock = Math.max(0, product.stock - item.quantity);
       }
       await product.save();
-    }
-
-    // If credit/utang, create debt record
-    if (paymentMethod === 'credit' || (paymentMethod === 'split' && creditAmount > 0)) {
-      const debtAmount = paymentMethod === 'credit' ? totalAmount : creditAmount;
-      await Debt.create({
-        customer,
-        transaction: transaction._id,
-        items: processedItems.map(i => ({
-          productName: i.productName,
-          quantity: i.quantity,
-          unitPrice: i.unitPrice,
-          subtotal: i.subtotal
-        })),
-        totalAmount: debtAmount,
-        createdBy: req.user._id,
-        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days default
-      });
     }
 
     await ActivityLog.log(

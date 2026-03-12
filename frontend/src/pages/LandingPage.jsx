@@ -14,10 +14,10 @@ const LandingPage = () => {
           <div className="max-w-2xl">
             <img 
               src={logo} 
-              alt="Lynx's Sari-sari Store" 
+              alt="Lynx's Sari-Sari Store POS and Sales System" 
               className="w-48 h-48 mx-auto mb-8 rounded-full shadow-2xl"
             />
-            <h1 className="text-5xl font-bold mb-4">Lynx's Sari-sari Store</h1>
+            <h1 className="text-5xl font-bold mb-4">Lynx's Sari-Sari Store POS and Sales System</h1>
             <p className="text-2xl mb-2">Your Neighborhood Store, Now Online</p>
             <p className="text-lg mb-8 opacity-80">
               Shop your daily essentials from the comfort of your home

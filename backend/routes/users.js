@@ -30,7 +30,7 @@ router.get('/', protect, authorize('admin'), async (req, res) => {
 });
 
 // @route   GET /api/users/customers
-// @desc    Get all customers (for debt/transaction selection)
+// @desc    Get all customers (for transaction selection)
 // @access  Private (admin, staff)
 router.get('/customers', protect, authorize('admin', 'staff'), async (req, res) => {
   try {
@@ -66,11 +66,11 @@ router.get('/:id', protect, authorize('admin'), async (req, res) => {
 });
 
 // @route   PUT /api/users/:id
-// @desc    Update user (admin can change role, credit limit, etc.)
+// @desc    Update user (admin can change role, etc.)
 // @access  Private (admin)
 router.put('/:id', protect, authorize('admin'), async (req, res) => {
   try {
-    const { firstName, lastName, email, role, phone, address, creditLimit } = req.body;
+    const { firstName, lastName, email, role, phone, address } = req.body;
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
@@ -80,7 +80,6 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
     if (role) user.role = role;
     if (phone !== undefined) user.phone = phone;
     if (address !== undefined) user.address = address;
-    if (creditLimit !== undefined) user.creditLimit = creditLimit;
 
     await user.save();
 
@@ -93,8 +92,7 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
       email: user.email,
       role: user.role,
       phone: user.phone,
-      address: user.address,
-      creditLimit: user.creditLimit
+      address: user.address
     });
   } catch (error) {
     res.status(400).json({ message: error.message });

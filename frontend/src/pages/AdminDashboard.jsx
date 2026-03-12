@@ -1,8 +1,9 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState, useCallback } from 'react';
 import { api, formatPeso, formatDate, formatDateTime } from '../utils/api';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import ThemeToggle from '../components/ThemeToggle';
+import toast, { Toaster } from 'react-hot-toast';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -33,32 +34,26 @@ const AdminDashboard = () => {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [categoryForm, setCategoryForm] = useState({ name: '', description: '', icon: '📦' });
 
-  // Debt state
-  const [debts, setDebts] = useState([]);
-  const [debtFilter, setDebtFilter] = useState('pending');
-  const [debtSearch, setDebtSearch] = useState('');
-  const [showPayModal, setShowPayModal] = useState(false);
-  const [payingDebt, setPayingDebt] = useState(null);
-  const [payAmount, setPayAmount] = useState('');
-  const [debtSummary, setDebtSummary] = useState([]);
-  const [showDebtDetailModal, setShowDebtDetailModal] = useState(false);
-  const [selectedDebt, setSelectedDebt] = useState(null);
-
   // Sales state
   const [transactions, setTransactions] = useState([]);
   const [salesDateFilter, setSalesDateFilter] = useState(new Date().toISOString().slice(0, 10));
   const [salesReceiptSearch, setSalesReceiptSearch] = useState('');
   const [salesPeriod, setSalesPeriod] = useState('week');
+  const [salesCustomMonth, setSalesCustomMonth] = useState('');
   const [salesAnalytics, setSalesAnalytics] = useState(null);
   const [showPrintView, setShowPrintView] = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [salesStaffFilter, setSalesStaffFilter] = useState('');
+  const [salesProductFilter, setSalesProductFilter] = useState('');
+  const [staffList, setStaffList] = useState([]);
 
   // Reports state
-  const [reportData, setReportData] = useState(null);
   const [reportPeriod, setReportPeriod] = useState('month');
   const [bestSellers, setBestSellers] = useState([]);
-  const [debtAging, setDebtAging] = useState(null);
+  const [inventoryReport, setInventoryReport] = useState(null);
+  const [staffPerformance, setStaffPerformance] = useState([]);
+  const [monthlyComparison, setMonthlyComparison] = useState(null);
 
   // Users state
   const [users, setUsers] = useState([]);
@@ -66,9 +61,6 @@ const AdminDashboard = () => {
   const [userSearch, setUserSearch] = useState('');
   const [showUserModal, setShowUserModal] = useState(false);
   const [userForm, setUserForm] = useState({ firstName: '', lastName: '', email: '', password: '', phone: '' });
-  const [showCreditModal, setShowCreditModal] = useState(false);
-  const [editingUser, setEditingUser] = useState(null);
-  const [newCreditLimit, setNewCreditLimit] = useState('');
 
   // Activity state
   const [activityLogs, setActivityLogs] = useState([]);
@@ -77,6 +69,11 @@ const AdminDashboard = () => {
   // Low stock alert state
   const [lowStockProducts, setLowStockProducts] = useState([]);
   const [dismissLowStock, setDismissLowStock] = useState(false);
+  // Near-expiry alert state
+  const [nearExpiryProducts, setNearExpiryProducts] = useState([]);
+  const [dismissNearExpiry, setDismissNearExpiry] = useState(false);
+  // Live clock
+  const [now, setNow] = useState(new Date());
   const [selectedActivity, setSelectedActivity] = useState(null);
   const [showActivityModal, setShowActivityModal] = useState(false);
 
@@ -126,18 +123,6 @@ const AdminDashboard = () => {
     } catch (e) { console.error(e); }
   }, []);
 
-  const loadDebts = useCallback(async () => {
-    try {
-      let url = '/debts?';
-      if (debtFilter && debtFilter !== 'all') url += `status=${debtFilter}&`;
-      if (debtSearch) url += `search=${debtSearch}&`;
-      const data = await api.get(url);
-      setDebts(data);
-      const summary = await api.get('/debts/summary');
-      setDebtSummary(summary);
-    } catch (e) { console.error(e); }
-  }, [debtFilter, debtSearch]);
-
   const loadTransactions = useCallback(async () => {
     try {
       let url;
@@ -153,21 +138,39 @@ const AdminDashboard = () => {
 
   const loadSalesAnalytics = useCallback(async () => {
     try {
-      const data = await api.get(`/reports/sales?period=${salesPeriod}`);
+      let url;
+      if (salesCustomMonth) {
+        const [year, month] = salesCustomMonth.split('-').map(Number);
+        const startDate = `${salesCustomMonth}-01`;
+        const lastDay = new Date(year, month, 0).getDate();
+        const endDate = `${salesCustomMonth}-${String(lastDay).padStart(2, '0')}`;
+        url = `/reports/sales?startDate=${startDate}&endDate=${endDate}`;
+      } else {
+        url = `/reports/sales?period=${salesPeriod}`;
+      }
+      if (salesStaffFilter) url += `&staffId=${salesStaffFilter}`;
+      if (salesProductFilter) url += `&productName=${encodeURIComponent(salesProductFilter)}`;
+      const data = await api.get(url);
       setSalesAnalytics(data);
     } catch (e) { console.error(e); }
-  }, [salesPeriod]);
+  }, [salesPeriod, salesCustomMonth, salesStaffFilter, salesProductFilter]);
+
+  const loadStaffList = useCallback(async () => {
+    try { setStaffList(await api.get('/reports/staff-list')); } catch (e) { console.error(e); }
+  }, []);
 
   const loadReports = useCallback(async () => {
     try {
-      const [sales, sellers, aging] = await Promise.all([
-        api.get(`/reports/sales?period=${reportPeriod}`),
+      const [sellers, invReport, staffPerf, monthly] = await Promise.all([
         api.get(`/reports/best-sellers?period=${reportPeriod}`),
-        api.get('/reports/debt-aging')
+        api.get('/reports/inventory-report'),
+        api.get(`/reports/staff-performance?period=${reportPeriod}`),
+        api.get('/reports/monthly-comparison')
       ]);
-      setReportData(sales);
       setBestSellers(sellers);
-      setDebtAging(aging);
+      setInventoryReport(invReport);
+      setStaffPerformance(staffPerf);
+      setMonthlyComparison(monthly);
     } catch (e) { console.error(e); }
   }, [reportPeriod]);
 
@@ -186,6 +189,14 @@ const AdminDashboard = () => {
       const data = await api.get('/products?lowStock=true');
       setLowStockProducts(data);
       setDismissLowStock(false);
+    } catch (e) { console.error(e); }
+  }, []);
+
+  const loadNearExpiryAlert = useCallback(async () => {
+    try {
+      const data = await api.get('/products?nearExpiry=true');
+      setNearExpiryProducts(data);
+      setDismissNearExpiry(false);
     } catch (e) { console.error(e); }
   }, []);
 
@@ -217,20 +228,29 @@ const AdminDashboard = () => {
   useEffect(() => {
     if (!user) return;
     loadLowStockAlert();
-  }, [user, loadLowStockAlert]);
+    loadNearExpiryAlert();
+  }, [user, loadLowStockAlert, loadNearExpiryAlert]);
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (!user) return;
     if (activeTab === 'dashboard') { loadDashboard(); loadCategories(); }
     if (activeTab === 'inventory') { loadProducts(); loadCategories(); }
     if (activeTab === 'categories') loadCategories();
-    if (activeTab === 'debts') loadDebts();
-    if (activeTab === 'sales') { loadTransactions(); loadSalesAnalytics(); }
+    if (activeTab === 'sales') { loadTransactions(); loadSalesAnalytics(); loadStaffList(); loadCategories(); }
     if (activeTab === 'reports') loadReports();
     if (activeTab === 'users') loadUsers();
     if (activeTab === 'activity') loadActivity();
     if (activeTab === 'feedback') { loadFeedback(); loadTickets(); }
-  }, [user, activeTab, loadDashboard, loadProducts, loadCategories, loadDebts, loadTransactions, loadSalesAnalytics, loadReports, loadUsers, loadActivity, loadFeedback, loadTickets]);
+  }, [user, activeTab, loadDashboard, loadProducts, loadCategories, loadTransactions, loadSalesAnalytics, loadReports, loadUsers, loadActivity, loadFeedback, loadTickets, loadStaffList]);
+
+  useEffect(() => {
+    if (activeTab === 'sales') loadSalesAnalytics();
+  }, [salesStaffFilter, salesProductFilter, salesPeriod, salesCustomMonth, activeTab, loadSalesAnalytics]);
 
   const handleLogout = () => { localStorage.removeItem('user'); navigate('/'); };
 
@@ -246,7 +266,7 @@ const AdminDashboard = () => {
         tingiUnit: product.tingiUnit || 'piraso',
         stock: product.stock, reorderLevel: product.reorderLevel || '5',
         maxStock: product.maxStock || '100', unit: product.unit || 'pcs',
-        expiryDate: product.expiryDate ? product.expiryDate.slice(0, 10) : ''
+        expiryDate: product.expiryDate ? new Date(product.expiryDate).toLocaleDateString('en-CA') : ''
       });
     } else {
       setEditingProduct(null);
@@ -328,25 +348,6 @@ const AdminDashboard = () => {
     } catch (e) { showAlertMsg(e.message, 'error'); }
   };
 
-  // Debt payment
-  const openPayModal = (debt) => {
-    setPayingDebt(debt);
-    setPayAmount('');
-    setShowPayModal(true);
-  };
-
-  const processPayment = async () => {
-    try {
-      await api.post(`/debts/${payingDebt._id}/pay`, {
-        amount: Number(payAmount),
-        method: 'cash'
-      });
-      showAlertMsg('Payment recorded!');
-      setShowPayModal(false);
-      loadDebts();
-    } catch (e) { showAlertMsg(e.message, 'error'); }
-  };
-
   // Feedback & Tickets
   const markFeedbackRead = async (id) => {
     try {
@@ -425,29 +426,6 @@ const AdminDashboard = () => {
     } catch (e) { showAlertMsg(e.message, 'error'); }
   };
 
-  const openCreditModal = (user) => {
-    setEditingUser(user);
-    setNewCreditLimit(user.creditLimit || '');
-    setShowCreditModal(true);
-  };
-
-  const updateCreditLimit = async () => {
-    if (!editingUser) return;
-    const limit = parseFloat(newCreditLimit);
-    if (isNaN(limit) || limit < 0) {
-      showAlertMsg('Please enter a valid credit limit', 'error');
-      return;
-    }
-    try {
-      await api.put(`/users/${editingUser._id}`, { creditLimit: limit });
-      showAlertMsg(`Credit limit updated to ${formatPeso(limit)}`);
-      setShowCreditModal(false);
-      setEditingUser(null);
-      setNewCreditLimit('');
-      loadUsers();
-    } catch (e) { showAlertMsg(e.message, 'error'); }
-  };
-
   if (!user) return null;
 
   const tabs = [
@@ -455,7 +433,6 @@ const AdminDashboard = () => {
     { key: 'inventory', label: '📦 Products' },
     { key: 'categories', label: '🏷️ Categories' },
     { key: 'sales', label: '💰 Sales' },
-    { key: 'debts', label: '📋 Debts' },
     { key: 'reports', label: '📈 Reports' },
     { key: 'users', label: '👥 Users' },
     { key: 'activity', label: '📝 Activity' },
@@ -464,10 +441,13 @@ const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen bg-base-200 flex">
+      <Toaster position="top-right" toastOptions={{ duration: 3500 }} />
       <div className="w-1/4 md:w-56 bg-base-100 shadow-xl flex flex-col min-h-screen print:hidden overflow-hidden">
         <div className="p-2 md:p-4 border-b border-base-300">
           <h2 className="font-bold text-[10px] md:text-lg truncate">🏪 Lynx Store</h2>
           <p className="text-[9px] md:text-xs opacity-60">Admin Panel</p>
+          <p className="text-[8px] md:text-xs opacity-50 mt-0.5 tabular-nums">{now.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+          <p className="text-[9px] md:text-sm font-mono font-semibold tabular-nums">{now.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</p>
         </div>
         <nav className="flex-1 p-1 md:p-2">
           {tabs.map(tab => (
@@ -496,7 +476,7 @@ const AdminDashboard = () => {
               <div className="text-xs mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
                 {lowStockProducts.slice(0, 6).map(p => (
                   <span key={p._id} className="font-medium">
-                    {p.name} <span className="opacity-70">({p.stock} {p.unit} left)</span>
+                    {p.name} <span className="opacity-70">({Math.floor(p.stock)} {p.unit} left)</span>
                   </span>
                 ))}
                 {lowStockProducts.length > 6 && <span className="opacity-70">+{lowStockProducts.length - 6} more</span>}
@@ -505,6 +485,27 @@ const AdminDashboard = () => {
             <div className="flex gap-2 shrink-0">
               <button onClick={() => { setActiveTab('inventory'); setDismissLowStock(true); }} className="btn btn-xs btn-warning btn-outline">View Inventory</button>
               <button onClick={() => setDismissLowStock(true)} className="btn btn-xs btn-ghost">✕</button>
+            </div>
+          </div>
+        )}
+
+        {nearExpiryProducts.length > 0 && !dismissNearExpiry && (
+          <div className="alert alert-error mb-4 shadow-lg flex items-start gap-3 print:hidden">
+            <span className="text-2xl">🕒</span>
+            <div className="flex-1">
+              <div className="font-bold text-sm">Expiry Alert — {nearExpiryProducts.length} product{nearExpiryProducts.length > 1 ? 's' : ''} expiring within 30 days</div>
+              <div className="text-xs mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+                {nearExpiryProducts.slice(0, 6).map(p => (
+                  <span key={p._id} className="font-medium">
+                    {p.name} <span className="opacity-70">({p.expiryDate ? new Date(p.expiryDate).toLocaleDateString() : ''})</span>
+                  </span>
+                ))}
+                {nearExpiryProducts.length > 6 && <span className="opacity-70">+{nearExpiryProducts.length - 6} more</span>}
+              </div>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <button onClick={() => { setActiveTab('inventory'); setDismissNearExpiry(true); }} className="btn btn-xs btn-error btn-outline">View Inventory</button>
+              <button onClick={() => setDismissNearExpiry(true)} className="btn btn-xs btn-ghost">✕</button>
             </div>
           </div>
         )}
@@ -525,11 +526,6 @@ const AdminDashboard = () => {
                 <div className="stat-desc text-[9px] md:text-xs">{dashboardStats.today.totalSales} transactions</div>
               </div>
               <div className="stat bg-base-100 rounded-xl shadow p-2 md:p-4">
-                <div className="stat-title text-[10px] md:text-sm">Total Debts</div>
-                <div className="stat-value text-error text-base md:text-2xl">{formatPeso(dashboardStats.debts.totalOutstanding)}</div>
-                <div className="stat-desc text-[9px] md:text-xs">{dashboardStats.debts.customersWithDebt} with debts</div>
-              </div>
-              <div className="stat bg-base-100 rounded-xl shadow p-2 md:p-4">
                 <div className="stat-title text-[10px] md:text-sm">Products</div>
                 <div className="stat-value text-base md:text-2xl">{dashboardStats.inventory.totalProducts}</div>
                 <div className="stat-desc text-[9px] md:text-xs">{dashboardStats.inventory.lowStockCount} low stock</div>
@@ -542,13 +538,12 @@ const AdminDashboard = () => {
             </div>
 
             <div className="grid lg:grid-cols-2 gap-4">
-              {dashboardStats.today.cashSales > 0 || dashboardStats.today.creditSales > 0 ? (
+              {dashboardStats.today.cashSales > 0 ? (
                 <div className="card bg-base-100 shadow">
                   <div className="card-body p-3 md:p-6">
                     <h3 className="card-title text-sm md:text-lg">💵 Today's Sales Breakdown</h3>
                     <div className="space-y-1 md:space-y-2 text-xs md:text-base">
                       <div className="flex justify-between"><span>Cash:</span><span className="font-bold text-success">{formatPeso(dashboardStats.today.cashSales)}</span></div>
-                      <div className="flex justify-between"><span>Utang:</span><span className="font-bold text-warning">{formatPeso(dashboardStats.today.creditSales)}</span></div>
                     </div>
                   </div>
                 </div>
@@ -575,12 +570,7 @@ const AdminDashboard = () => {
                         <span>⏰</span> <span>{dashboardStats.inventory.nearExpiryCount} products near expiry</span>
                       </div>
                     )}
-                    {dashboardStats.debts.pendingCount > 0 && (
-                      <div className="flex items-center gap-2 text-info">
-                        <span>📋</span> <span>{dashboardStats.debts.pendingCount} pending debts</span>
-                      </div>
-                    )}
-                    {dashboardStats.inventory.lowStockCount === 0 && dashboardStats.inventory.nearExpiryCount === 0 && dashboardStats.debts.pendingCount === 0 && (
+                    {dashboardStats.inventory.lowStockCount === 0 && dashboardStats.inventory.nearExpiryCount === 0 && (
                       <p className="opacity-60 text-xs md:text-sm">No alerts today! 🎉</p>
                     )}
                   </div>
@@ -636,7 +626,7 @@ const AdminDashboard = () => {
                       <td>{p.tingiPrice > 0 ? `${formatPeso(p.tingiPrice)}/${p.tingiUnit}` : '-'}</td>
                       <td>
                         <span className={`badge ${p.isLowStock ? 'badge-warning' : 'badge-success'} badge-sm`}>
-                          {p.stock} {p.unit}
+                          {Math.floor(p.stock)} {p.unit}
                         </span>
                       </td>
                       <td className={p.isExpired ? 'text-error font-bold' : p.isNearExpiry ? 'text-warning' : ''}>
@@ -691,7 +681,9 @@ const AdminDashboard = () => {
                 <h1 className="text-3xl font-bold mb-2">Lynx's Sari-sari Store</h1>
                 <h2 className="text-xl mb-1">Sales Analytics Report</h2>
                 <p className="text-sm opacity-70">
-                  Period: {salesPeriod === 'week' ? 'Last 7 Days' : salesPeriod === 'month' ? 'Last 30 Days' : 'Last 365 Days'}
+                  Period: {salesCustomMonth
+                    ? new Date(salesCustomMonth + '-01').toLocaleDateString('en-PH', { month: 'long', year: 'numeric' })
+                    : salesPeriod === 'week' ? 'Last 7 Days' : salesPeriod === 'month' ? 'Last 30 Days' : 'Last 365 Days'}
                 </p>
                 <p className="text-sm opacity-70">Generated on: {formatDateTime(new Date())}</p>
               </div>
@@ -705,13 +697,42 @@ const AdminDashboard = () => {
             </div>
 
             {/* Period Filter */}
-            <div className="flex gap-2 mb-6 print:hidden">
+            <div className="flex flex-wrap gap-2 mb-3 print:hidden items-center">
               {['week', 'month', 'year'].map(p => (
-                <button key={p} onClick={() => setSalesPeriod(p)}
-                  className={`btn btn-sm ${salesPeriod === p ? 'btn-primary' : 'btn-ghost'}`}>
+                <button key={p} onClick={() => { setSalesPeriod(p); setSalesCustomMonth(''); }}
+                  className={`btn btn-sm ${!salesCustomMonth && salesPeriod === p ? 'btn-primary' : 'btn-ghost'}`}>
                   {p === 'week' ? '📅 This Week' : p === 'month' ? '📆 This Month' : '📊 This Year'}
                 </button>
               ))}
+              <div className="divider divider-horizontal mx-0 hidden sm:flex"></div>
+              <label className="text-sm opacity-60 font-medium">Browse Month:</label>
+              <input
+                type="month"
+                value={salesCustomMonth}
+                max={new Date().toISOString().slice(0, 7)}
+                onChange={e => { setSalesCustomMonth(e.target.value); setSalesPeriod(''); }}
+                className={`input input-bordered input-sm w-40 ${salesCustomMonth ? 'border-primary' : ''}`}
+              />
+              {salesCustomMonth && (
+                <button onClick={() => { setSalesCustomMonth(''); setSalesPeriod('week'); }}
+                  className="btn btn-sm btn-ghost text-error">✕ Clear</button>
+              )}
+            </div>
+
+            {/* Staff & Product Filters */}
+            <div className="flex flex-wrap gap-2 mb-6 print:hidden">
+              <select value={salesStaffFilter} onChange={e => setSalesStaffFilter(e.target.value)}
+                className="select select-bordered select-sm">
+                <option value="">👤 All Staff</option>
+                {staffList.map(s => <option key={s._id} value={s._id}>{s.firstName} {s.lastName}</option>)}
+              </select>
+              <input type="text" placeholder="🔍 Filter by product name..."
+                value={salesProductFilter} onChange={e => setSalesProductFilter(e.target.value)}
+                className="input input-bordered input-sm w-52" />
+              {(salesStaffFilter || salesProductFilter) && (
+                <button onClick={() => { setSalesStaffFilter(''); setSalesProductFilter(''); }}
+                  className="btn btn-sm btn-ghost text-error">✕ Clear Filters</button>
+              )}
             </div>
 
             {/* Loading State */}
@@ -741,14 +762,6 @@ const AdminDashboard = () => {
                       <div className="text-sm opacity-90 font-medium">Cash Sales</div>
                       <div className="text-2xl lg:text-3xl font-bold">{formatPeso(salesAnalytics.cashTotal)}</div>
                       <div className="text-xs opacity-75">{salesAnalytics.cashCount} cash transactions</div>
-                    </div>
-                  </div>
-
-                  <div className="card bg-gradient-to-br from-warning to-warning/70 text-warning-content shadow-lg print:bg-none print:bg-white print:text-black print:shadow-none print:border print:border-base-300">
-                    <div className="card-body p-4 lg:p-6 print:p-2">
-                      <div className="text-sm opacity-90 font-medium">Credit Sales</div>
-                      <div className="text-2xl lg:text-3xl font-bold">{formatPeso(salesAnalytics.creditTotal)}</div>
-                      <div className="text-xs opacity-75">{salesAnalytics.creditCount} credit transactions</div>
                     </div>
                   </div>
 
@@ -785,16 +798,6 @@ const AdminDashboard = () => {
                           <td className="border">{salesAnalytics.cashCount} Transactions</td>
                         </tr>
                         <tr>
-                          <td className="border font-medium">Credit (Utang) Sales</td>
-                          <td className="border">{formatPeso(salesAnalytics.creditTotal)}</td>
-                          <td className="border">{salesAnalytics.creditCount} Transactions</td>
-                        </tr>
-                        <tr>
-                          <td className="border font-medium">Split Payments</td>
-                          <td className="border">{formatPeso(salesAnalytics.splitTotal || 0)}</td>
-                          <td className="border">{salesAnalytics.splitCount || 0} Transactions</td>
-                        </tr>
-                        <tr>
                           <td className="border font-medium">Average Sale</td>
                           <td className="border">{formatPeso(salesAnalytics.averageTransaction)}</td>
                           <td className="border">per transaction</td>
@@ -813,27 +816,13 @@ const AdminDashboard = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 print:hidden">
                   <div className="card bg-base-100 shadow print:shadow-none print:border print:border-base-200">
                     <div className="card-body p-5 print:p-3">
-                      <h3 className="card-title text-lg print:text-sm">💵 Payment Methods Breakdown</h3>
+                      <h3 className="card-title text-lg print:text-sm">💵 Payment Breakdown</h3>
                       <div className="space-y-3">
                         <div className="flex justify-between items-center p-2 md:p-3 bg-success/10 rounded-lg">
                           <span className="font-medium text-xs md:text-base">💵 Cash</span>
                           <div className="text-right">
                             <div className="font-bold text-sm md:text-lg">{formatPeso(salesAnalytics.cashTotal)}</div>
                             <div className="text-[10px] md:text-xs opacity-60">{salesAnalytics.cashCount} txns</div>
-                          </div>
-                        </div>
-                        <div className="flex justify-between items-center p-2 md:p-3 bg-warning/10 rounded-lg">
-                          <span className="font-medium text-xs md:text-base">📋 Credit</span>
-                          <div className="text-right">
-                            <div className="font-bold text-sm md:text-lg">{formatPeso(salesAnalytics.creditTotal)}</div>
-                            <div className="text-[10px] md:text-xs opacity-60">{salesAnalytics.creditCount} txns</div>
-                          </div>
-                        </div>
-                        <div className="flex justify-between items-center p-3 bg-info/10 rounded-lg">
-                          <span className="font-medium">💵📋 Split Payment</span>
-                          <div className="text-right">
-                            <div className="font-bold text-lg">{formatPeso(salesAnalytics.splitTotal || 0)}</div>
-                            <div className="text-xs opacity-60">{salesAnalytics.splitCount || 0} transactions</div>
                           </div>
                         </div>
                       </div>
@@ -994,6 +983,44 @@ const AdminDashboard = () => {
               </div>
             )}
 
+            {/* Time of Day Analysis */}
+            {salesAnalytics?.timeOfDay && (
+              <div className="card bg-base-100 shadow mb-6 print:hidden">
+                <div className="card-body">
+                  <h3 className="card-title text-lg mb-4">🕐 Top Selling Time of Day</h3>
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                    {salesAnalytics.timeOfDay.map(t => {
+                      const maxRev = Math.max(...salesAnalytics.timeOfDay.map(x => x.revenue));
+                      const isBest = t.revenue === maxRev && maxRev > 0;
+                      return (
+                        <div key={t.label} className={`p-4 rounded-xl text-center border-2 transition-all ${isBest ? 'border-warning bg-warning/10' : 'border-base-300 bg-base-200'}`}>
+                          <div className="text-3xl mb-1">{t.label.split(' ')[0]}</div>
+                          <div className="font-bold text-sm">{t.label.replace(/^[\S]+ /, '')}</div>
+                          <div className="text-xs opacity-60 mb-2">{t.range}</div>
+                          <div className="font-bold text-lg text-primary">{formatPeso(t.revenue)}</div>
+                          <div className="text-xs opacity-60">{t.count} sales</div>
+                          {isBest && t.revenue > 0 && <div className="badge badge-warning badge-sm mt-1">🏆 Peak</div>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="w-full h-48">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={salesAnalytics.timeOfDay} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                        <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                        <YAxis tickFormatter={v => `₱${(v/1000).toFixed(0)}k`} tick={{ fontSize: 11 }} />
+                        <Tooltip formatter={(v, n) => n === 'revenue' ? [formatPeso(v), 'Revenue'] : [v, 'Sales']} />
+                        <Bar dataKey="revenue" fill="#f59e0b" name="revenue" radius={[4,4,0,0]} />
+                        <Bar dataKey="count" fill="#3b82f6" name="count" radius={[4,4,0,0]} />
+                        <Legend formatter={v => v === 'revenue' ? 'Revenue (₱)' : 'Transactions'} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Daily Sales Table */}
             <div className="card bg-base-100 shadow mb-6 print:hidden">
               <div className="card-body">
@@ -1033,8 +1060,8 @@ const AdminDashboard = () => {
                           <td className="text-xs print:text-[10px]">{t.items.length} item(s)</td>
                           <td className="font-bold print:text-sm">{formatPeso(t.totalAmount)}</td>
                           <td>
-                            <span className={`badge badge-sm print:badge-outline print:text-black print:border-gray-300 ${t.paymentMethod === 'cash' ? 'badge-success' : t.paymentMethod === 'credit' ? 'badge-warning' : 'badge-info'}`}>
-                              {t.paymentMethod === 'cash' ? '💵 Cash' : t.paymentMethod === 'credit' ? '📋 Utang' : '💵📋 Split'}
+                            <span className="badge badge-sm badge-success print:badge-outline print:text-black print:border-gray-300">
+                              💵 Cash
                             </span>
                           </td>
                           <td className="text-xs">{t.staff?.firstName}</td>
@@ -1081,157 +1108,107 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {activeTab === 'debts' && (
-          <div>
-            <h1 className="text-2xl font-bold mb-4">📋 Debt List</h1>
+        {activeTab === 'reports' && (
+          <div id="bi-report-root">
+            {/* Print-only header */}
+            <div className="hidden print:block mb-6 text-center">
+              <h1 className="text-3xl font-bold">Lynx Store — Business Intelligence Report</h1>
+              <p className="text-sm opacity-70">Period: {reportPeriod === 'week' ? 'This Week' : 'This Month'} &nbsp;|&nbsp; Printed: {new Date().toLocaleString()}</p>
+              <hr className="my-2" />
+            </div>
 
-            {debtSummary.length > 0 && (
-              <div className="mb-4">
-                <h3 className="font-semibold mb-2">Customers with Debts:</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-4">
-                  {debtSummary.map((ds, i) => (
-                    <div key={i} className="card bg-base-100 shadow-sm p-3">
-                      <div className="font-semibold">{ds.customer?.firstName} {ds.customer?.lastName}</div>
-                      <div className="text-lg font-bold text-error">{formatPeso(ds.remainingBalance)}</div>
-                      <div className="text-xs opacity-60">{ds.debtCount} debts</div>
-                    </div>
+            {/* Toolbar */}
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-6 print:hidden">
+              <h1 className="text-2xl font-bold">📈 Business Intelligence</h1>
+              <div className="flex items-center gap-2">
+                <div className="flex gap-1">
+                  {['week', 'month'].map(p => (
+                    <button key={p} onClick={() => setReportPeriod(p)}
+                      className={`btn btn-sm ${reportPeriod === p ? 'btn-primary' : 'btn-ghost'}`}>
+                      {p === 'week' ? 'This Week' : 'This Month'}
+                    </button>
                   ))}
                 </div>
+                <button onClick={() => window.print()}
+                  className="btn btn-sm btn-outline gap-1">
+                  🖨️ Print / Export PDF
+                </button>
               </div>
+            </div>
+
+            {/* ── Monthly Comparison ── */}
+            {monthlyComparison && (
+              <section className="mb-8">
+                <h2 className="text-lg font-bold mb-3 flex items-center gap-2">📅 Monthly Comparison
+                  <span className="badge badge-outline text-xs font-normal">This Month vs Last Month</span>
+                </h2>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                  {[
+                    { label: 'Revenue', thisVal: formatPeso(monthlyComparison.thisMonth?.revenue ?? 0), lastVal: formatPeso(monthlyComparison.lastMonth?.revenue ?? 0), change: monthlyComparison.changes?.revenue, icon: '💰' },
+                    { label: 'Orders', thisVal: monthlyComparison.thisMonth?.orders ?? 0, lastVal: monthlyComparison.lastMonth?.orders ?? 0, change: monthlyComparison.changes?.orders, icon: '🧾' },
+                    { label: 'Avg Order', thisVal: formatPeso(monthlyComparison.thisMonth?.avgOrder ?? 0), lastVal: formatPeso(monthlyComparison.lastMonth?.avgOrder ?? 0), change: monthlyComparison.changes?.avgOrder, icon: '📊' },
+                    { label: 'Items Sold', thisVal: monthlyComparison.thisMonth?.items ?? 0, lastVal: monthlyComparison.lastMonth?.items ?? 0, change: monthlyComparison.changes?.items, icon: '📦' },
+                  ].map(({ label, thisVal, lastVal, change, icon }) => {
+                    const isUp = change && !change.startsWith('-') && change !== '0%';
+                    const isDown = change && change.startsWith('-');
+                    return (
+                      <div key={label} className="card bg-base-100 shadow-sm border border-base-200">
+                        <div className="card-body p-4">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs opacity-60 uppercase tracking-wide">{icon} {label}</span>
+                            {change && (
+                              <span className={`badge badge-sm ${isUp ? 'badge-success' : isDown ? 'badge-error' : 'badge-ghost'}`}>
+                                {isUp ? '▲' : isDown ? '▼' : '—'} {change}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xl font-bold">{thisVal}</div>
+                          <div className="text-xs opacity-50">Last month: {lastVal}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
             )}
 
-            <div className="flex gap-2 mb-4">
-              <input type="text" placeholder="🔍 Search customer name..." value={debtSearch}
-                onChange={e => setDebtSearch(e.target.value)} className="input input-bordered input-sm w-64" />
-            </div>
-
-            <div className="flex gap-2 mb-4">
-              {['all', 'pending', 'partial', 'paid'].map(s => (
-                <button key={s} onClick={() => setDebtFilter(s)}
-                  className={`btn btn-sm ${debtFilter === s ? 'btn-primary' : 'btn-ghost'}`}>
-                  {s === 'all' ? 'All' : s === 'pending' ? 'Unpaid' : s === 'partial' ? 'Partial' : 'Paid'}
-                </button>
-              ))}
-            </div>
-
-            <div className="overflow-x-auto bg-base-100 rounded-xl shadow">
-              <table className="table table-sm">
-                <thead>
-                  <tr>
-                    <th>Customer</th>
-                    <th>Items/Description</th>
-                    <th>Total</th>
-                    <th>Amount Paid</th>
-                    <th>Remaining</th>
-                    <th>Status</th>
-                    <th>Date</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {debts.map(d => (
-                    <tr key={d._id} className="cursor-pointer hover:bg-base-200"
-                        onClick={() => { setSelectedDebt(d); setShowDebtDetailModal(true); }}>
-                      <td className="font-semibold">{d.customer?.firstName} {d.customer?.lastName}</td>
-                      <td className="text-xs">
-                        {d.items.length > 0 ? d.items.map(i => `${i.productName} x${i.quantity}`).join(', ') : d.description || '-'}
-                      </td>
-                      <td>{formatPeso(d.totalAmount)}</td>
-                      <td className="text-success">{formatPeso(d.paidAmount)}</td>
-                      <td className="font-bold text-error">{formatPeso(d.remainingBalance)}</td>
-                      <td>
-                        <span className={`badge badge-sm ${d.status === 'paid' ? 'badge-success' : d.status === 'partial' ? 'badge-warning' : 'badge-error'}`}>
-                          {d.status === 'paid' ? '✅ Paid' : d.status === 'partial' ? '⏳ Partial' : '❌ Pending'}
-                        </span>
-                      </td>
-                      <td className="text-xs">{formatDate(d.createdAt)}</td>
-                      <td onClick={(e) => e.stopPropagation()}>
-                        {d.status !== 'paid' && (
-                          <button onClick={() => openPayModal(d)} className="btn btn-xs btn-success">💵 Pay</button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                  {debts.length === 0 && (
-                    <tr><td colSpan="8" className="text-center py-8 opacity-60">No debt records</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'reports' && (
-          <div>
-            <h1 className="text-2xl font-bold mb-4">📈 Reports</h1>
-            <div className="flex gap-2 mb-4">
-              {['week', 'month'].map(p => (
-                <button key={p} onClick={() => setReportPeriod(p)}
-                  className={`btn btn-sm ${reportPeriod === p ? 'btn-primary' : 'btn-ghost'}`}>
-                  {p === 'week' ? 'This Week' : 'This Month'}
-                </button>
-              ))}
-            </div>
-
-            {reportData && (
-              <div className="grid lg:grid-cols-2 gap-4">
-                <div className="card bg-base-100 shadow">
-                  <div className="card-body">
-                    <h3 className="card-title">💰 Sales Summary</h3>
-                    <div className="space-y-2">
-                      <div className="flex justify-between"><span>Total Revenue:</span><span className="font-bold text-xl">{formatPeso(reportData.totalRevenue)}</span></div>
-                      <div className="flex justify-between"><span>Transactions:</span><span>{reportData.totalTransactions}</span></div>
-                      <div className="flex justify-between"><span>Cash Sales:</span><span className="text-success">{formatPeso(reportData.cashTotal)}</span></div>
-                      <div className="flex justify-between"><span>Credit/Utang Sales:</span><span className="text-warning">{formatPeso(reportData.creditTotal)}</span></div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="card bg-base-100 shadow">
-                  <div className="card-body">
-                    <h3 className="card-title">🏆 Best Sellers</h3>
-                    <div className="space-y-1">
-                      {bestSellers.slice(0, 8).map((bs, i) => (
-                        <div key={i} className="flex justify-between text-sm">
-                          <span>{i + 1}. {bs.name}</span>
-                          <span className="font-semibold">{bs.totalQuantity} sold</span>
-                        </div>
-                      ))}
-                      {bestSellers.length === 0 && <p className="opacity-60">No data yet</p>}
-                    </div>
-                  </div>
-                </div>
-
-                {debtAging && (
-                  <div className="card bg-base-100 shadow lg:col-span-2">
-                    <div className="card-body">
-                      <h3 className="card-title">📋 Debt Aging Report</h3>
-                      <div className="grid grid-cols-3 gap-4">
-                        {Object.entries(debtAging).map(([period, data]) => (
-                          <div key={period} className={`p-4 rounded-lg ${period.includes('60+') ? 'bg-error/10' : period.includes('31') ? 'bg-warning/10' : 'bg-info/10'}`}>
-                            <div className="text-sm font-semibold">{period}</div>
-                            <div className="text-2xl font-bold">{formatPeso(data.total)}</div>
-                            <div className="text-xs opacity-60">{data.count} debts</div>
-                          </div>
-                        ))}
+            {/* ── Inventory Report ── */}
+            {inventoryReport && (
+              <section className="mb-8">
+                <h2 className="text-lg font-bold mb-3">🗄️ Inventory Report</h2>
+                {/* Summary Cards */}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
+                  {[
+                    { label: 'Total Products', val: inventoryReport.summary?.totalProducts ?? 0, cls: 'text-base-content' },
+                    { label: 'Out of Stock', val: inventoryReport.summary?.outOfStock ?? 0, cls: 'text-error' },
+                    { label: 'Low Stock (≤5)', val: inventoryReport.summary?.lowStock ?? 0, cls: 'text-warning' },
+                    { label: 'Near Expiry', val: inventoryReport.summary?.nearExpiry ?? 0, cls: 'text-warning' },
+                    { label: 'Expired', val: inventoryReport.summary?.expired ?? 0, cls: 'text-error' },
+                    { label: 'Inventory Value', val: formatPeso(inventoryReport.summary?.inventoryValue ?? 0), cls: 'text-success' },
+                  ].map(({ label, val, cls }) => (
+                    <div key={label} className="card bg-base-100 shadow-sm border border-base-200">
+                      <div className="card-body p-3 text-center">
+                        <div className={`text-xl font-bold ${cls}`}>{val}</div>
+                        <div className="text-xs opacity-60">{label}</div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  ))}
+                </div>
 
-                {reportData.dailyBreakdown?.length > 0 && (
-                  <div className="card bg-base-100 shadow lg:col-span-2">
-                    <div className="card-body">
-                      <h3 className="card-title">📊 Daily Sales Breakdown</h3>
+                {/* Out of Stock */}
+                {inventoryReport.outOfStock?.length > 0 && (
+                  <div className="card bg-base-100 shadow-sm mb-3">
+                    <div className="card-body p-4">
+                      <h3 className="font-semibold text-error mb-2">🚫 Out of Stock ({inventoryReport.outOfStock.length})</h3>
                       <div className="overflow-x-auto">
-                        <table className="table table-sm">
-                          <thead><tr><th>Date</th><th>Revenue</th><th>Transactions</th></tr></thead>
+                        <table className="table table-xs">
+                          <thead><tr><th>Product</th><th>Category</th><th>Price</th></tr></thead>
                           <tbody>
-                            {reportData.dailyBreakdown.map(d => (
-                              <tr key={d.date}>
-                                <td>{d.date}</td>
-                                <td className="font-bold">{formatPeso(d.revenue)}</td>
-                                <td>{d.count}</td>
+                            {inventoryReport.outOfStock.map((p, i) => (
+                              <tr key={i} className="hover">
+                                <td className="font-medium">{p.name}</td>
+                                <td className="opacity-70">{p.category}</td>
+                                <td>{formatPeso(p.price)}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -1240,8 +1217,177 @@ const AdminDashboard = () => {
                     </div>
                   </div>
                 )}
-              </div>
+
+                {/* Low Stock */}
+                {inventoryReport.lowStock?.length > 0 && (
+                  <div className="card bg-base-100 shadow-sm mb-3">
+                    <div className="card-body p-4">
+                      <h3 className="font-semibold text-warning mb-2">⚠️ Low Stock ({inventoryReport.lowStock.length})</h3>
+                      <div className="overflow-x-auto">
+                        <table className="table table-xs">
+                          <thead><tr><th>Product</th><th>Category</th><th>Stock</th><th>Price</th></tr></thead>
+                          <tbody>
+                            {inventoryReport.lowStock.map((p, i) => (
+                              <tr key={i} className="hover">
+                                <td className="font-medium">{p.name}</td>
+                                <td className="opacity-70">{p.category}</td>
+                                <td><span className="badge badge-warning badge-sm">{Math.floor(p.stock)}</span></td>
+                                <td>{formatPeso(p.price)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Near Expiry */}
+                {inventoryReport.nearExpiry?.length > 0 && (
+                  <div className="card bg-base-100 shadow-sm mb-3">
+                    <div className="card-body p-4">
+                      <h3 className="font-semibold text-warning mb-2">🕒 Near Expiry — within 30 days ({inventoryReport.nearExpiry.length})</h3>
+                      <div className="overflow-x-auto">
+                        <table className="table table-xs">
+                          <thead><tr><th>Product</th><th>Category</th><th>Stock</th><th>Expiry Date</th></tr></thead>
+                          <tbody>
+                            {inventoryReport.nearExpiry.map((p, i) => (
+                              <tr key={i} className="hover">
+                                <td className="font-medium">{p.name}</td>
+                                <td className="opacity-70">{p.category}</td>
+                                <td>{Math.floor(p.stock)}</td>
+                                <td className="text-warning">{p.expiryDate ? new Date(p.expiryDate).toLocaleDateString() : '—'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Expired */}
+                {inventoryReport.expired?.length > 0 && (
+                  <div className="card bg-base-100 shadow-sm mb-3">
+                    <div className="card-body p-4">
+                      <h3 className="font-semibold text-error mb-2">❌ Expired Products ({inventoryReport.expired.length})</h3>
+                      <div className="overflow-x-auto">
+                        <table className="table table-xs">
+                          <thead><tr><th>Product</th><th>Category</th><th>Stock</th><th>Expiry Date</th></tr></thead>
+                          <tbody>
+                            {inventoryReport.expired.map((p, i) => (
+                              <tr key={i} className="hover">
+                                <td className="font-medium">{p.name}</td>
+                                <td className="opacity-70">{p.category}</td>
+                                <td>{Math.floor(p.stock)}</td>
+                                <td className="text-error">{p.expiryDate ? new Date(p.expiryDate).toLocaleDateString() : '—'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </section>
             )}
+
+            {/* ── Staff Performance ── */}
+            <section className="mb-8">
+              <h2 className="text-lg font-bold mb-3">👨‍💼 Staff Performance
+                <span className="text-sm font-normal opacity-60 ml-2">({reportPeriod === 'week' ? 'This Week' : 'This Month'})</span>
+              </h2>
+              {staffPerformance.length > 0 ? (
+                <div className="card bg-base-100 shadow-sm">
+                  <div className="card-body p-4">
+                    <div className="overflow-x-auto">
+                      <table className="table table-sm">
+                        <thead>
+                          <tr>
+                            <th>#</th>
+                            <th>Staff Name</th>
+                            <th>Transactions</th>
+                            <th>Items Sold</th>
+                            <th>Revenue</th>
+                            <th>Avg per Txn</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {staffPerformance.map((s, i) => (
+                            <tr key={i} className="hover">
+                              <td className="opacity-50">{i + 1}</td>
+                              <td className="font-medium">{s.name}</td>
+                              <td>{s.transactions}</td>
+                              <td>{s.items}</td>
+                              <td className="font-bold text-success">{formatPeso(s.revenue)}</td>
+                              <td className="opacity-70">{s.transactions > 0 ? formatPeso(s.revenue / s.transactions) : '—'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="card bg-base-100 shadow-sm">
+                  <div className="card-body p-6 text-center opacity-50">No staff performance data for this period.</div>
+                </div>
+              )}
+            </section>
+
+            {/* ── Best Sellers ── */}
+            <section className="mb-8">
+              <h2 className="text-lg font-bold mb-3">🏆 Best Sellers
+                <span className="text-sm font-normal opacity-60 ml-2">({reportPeriod === 'week' ? 'This Week' : 'This Month'})</span>
+              </h2>
+              {bestSellers.length > 0 ? (
+                <div className="card bg-base-100 shadow-sm">
+                  <div className="card-body p-4">
+                    <div className="overflow-x-auto">
+                      <table className="table table-sm">
+                        <thead>
+                          <tr>
+                            <th>#</th>
+                            <th>Product</th>
+                            <th>Category</th>
+                            <th className="text-center">Qty Sold</th>
+                            <th className="text-right">Revenue</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {bestSellers.slice(0, 15).map((bs, i) => (
+                            <tr key={i} className="hover">
+                              <td>
+                                {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : <span className="opacity-40">{i + 1}</span>}
+                              </td>
+                              <td className="font-medium">{bs.name}</td>
+                              <td className="opacity-60 text-xs">{bs.category ?? '—'}</td>
+                              <td className="text-center">
+                                <span className="badge badge-outline badge-sm">{bs.totalQuantity}</span>
+                              </td>
+                              <td className="text-right font-bold text-success">{formatPeso(bs.totalRevenue ?? 0)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="card bg-base-100 shadow-sm">
+                  <div className="card-body p-6 text-center opacity-50">No sales data for this period.</div>
+                </div>
+              )}
+            </section>
+
+            {/* Print footer */}
+            <div className="hidden print:block mt-10 pt-4 border-t text-sm opacity-60">
+              <div className="grid grid-cols-3 gap-8 mt-6">
+                <div className="text-center"><div className="border-t border-black pt-1 mt-8">Prepared by</div></div>
+                <div className="text-center"><div className="border-t border-black pt-1 mt-8">Reviewed by</div></div>
+                <div className="text-center"><div className="border-t border-black pt-1 mt-8">Approved by</div></div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -1266,7 +1412,7 @@ const AdminDashboard = () => {
             <div className="overflow-x-auto bg-base-100 rounded-xl shadow">
               <table className="table table-sm">
                 <thead>
-                  <tr><th>Name</th><th>Email</th><th>Role</th><th>Phone</th><th>Credit Limit</th><th>Registered</th><th>Action</th></tr>
+                  <tr><th>Name</th><th>Email</th><th>Role</th><th>Phone</th><th>Registered</th><th>Action</th></tr>
                 </thead>
                 <tbody>
                   {users.map(u => (
@@ -1279,13 +1425,9 @@ const AdminDashboard = () => {
                         </span>
                       </td>
                       <td>{u.phone || '-'}</td>
-                      <td>{u.creditLimit ? formatPeso(u.creditLimit) : '-'}</td>
                       <td className="text-xs">{formatDate(u.createdAt)}</td>
                       <td>
                         <div className="flex gap-1">
-                          {u.role === 'customer' && (
-                            <button onClick={() => openCreditModal(u)} className="btn btn-xs btn-ghost text-info" title="Edit Credit Limit">💳</button>
-                          )}
                           {u._id !== user._id && (
                             <button onClick={() => deleteUser(u._id)} className="btn btn-xs btn-ghost text-error" title="Delete User">🗑️</button>
                           )}
@@ -1303,10 +1445,10 @@ const AdminDashboard = () => {
           <div>
             <h1 className="text-lg md:text-2xl font-bold mb-4">📝 Activity Log</h1>
             <div className="flex gap-1 md:gap-2 mb-4 flex-wrap">
-              {['', 'sale', 'inventory', 'debt', 'payment', 'user'].map(c => (
+              {['', 'sale', 'inventory', 'user'].map(c => (
                 <button key={c} onClick={() => setActivityFilter(c)}
                   className={`btn btn-[10px] md:btn-sm ${activityFilter === c ? 'btn-primary' : 'btn-ghost'} h-auto py-1.5 min-h-0`}>
-                  {c === '' ? 'All' : c === 'sale' ? '💰 Sales' : c === 'inventory' ? '📦 Inventory' : c === 'debt' ? '📋 Debts' : c === 'payment' ? '💵 Payments' : '👤 User'}
+                  {c === '' ? 'All' : c === 'sale' ? '💰 Sales' : c === 'inventory' ? '📦 Inventory' : '👤 User'}
                 </button>
               ))}
             </div>
@@ -1316,7 +1458,7 @@ const AdminDashboard = () => {
                   onClick={() => { setSelectedActivity(log); setShowActivityModal(true); }}
                   className="card bg-base-100 shadow-sm p-2 md:p-3 flex flex-row items-center gap-2 md:gap-3 cursor-pointer hover:bg-base-200 transition-colors">
                   <span className="text-base md:text-xl shrink-0">
-                    {log.category === 'sale' ? '💰' : log.category === 'inventory' ? '📦' : log.category === 'debt' ? '📋' : log.category === 'payment' ? '💵' : '👤'}
+                    {log.category === 'sale' ? '💰' : log.category === 'inventory' ? '📦' : '👤'}
                   </span>
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-xs md:text-sm truncate">{log.action}</div>
@@ -1622,59 +1764,6 @@ const AdminDashboard = () => {
         </div>
       )}
 
-      {showPayModal && payingDebt && (
-        <div className="modal modal-open">
-          <div className="modal-box">
-            <h3 className="font-bold text-lg mb-4">💵 Receive Payment</h3>
-            <div className="bg-base-200 p-3 rounded-lg mb-4">
-              <p><strong>Customer:</strong> {payingDebt.customer?.firstName} {payingDebt.customer?.lastName}</p>
-              <p><strong>Total Debt:</strong> {formatPeso(payingDebt.totalAmount)}</p>
-              <p><strong>Amount Paid:</strong> {formatPeso(payingDebt.paidAmount)}</p>
-              <p className="text-lg font-bold text-error"><strong>Remaining:</strong> {formatPeso(payingDebt.remainingBalance)}</p>
-            </div>
-            <div className="form-control mb-3">
-              <label className="label"><span className="label-text">Payment Amount (₱)</span></label>
-              <input type="number" value={payAmount} onChange={e => setPayAmount(e.target.value)}
-                className="input input-bordered input-lg text-center" placeholder="0.00"
-                max={payingDebt.remainingBalance} />
-            </div>
-            <div className="flex gap-2 mb-3">
-              <button onClick={() => setPayAmount(payingDebt.remainingBalance)} className="btn btn-sm btn-outline">Full Payment</button>
-              <button onClick={() => setPayAmount(Math.ceil(payingDebt.remainingBalance / 2))} className="btn btn-sm btn-outline">Half</button>
-            </div>
-            <div className="modal-action">
-              <button onClick={() => setShowPayModal(false)} className="btn btn-ghost">Cancel</button>
-              <button onClick={processPayment} className="btn btn-success" disabled={!payAmount || Number(payAmount) <= 0}>
-                ✅ Record Payment
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showCreditModal && editingUser && (
-        <div className="modal modal-open">
-          <div className="modal-box">
-            <h3 className="font-bold text-lg mb-4">💳 Edit Credit Limit</h3>
-            <div className="bg-base-200 rounded-lg p-4 mb-4">
-              <div className="font-semibold">{editingUser.firstName} {editingUser.lastName}</div>
-              <div className="text-xs opacity-60">{editingUser.email}</div>
-              <div className="text-sm mt-2">Current Credit Limit: <span className="font-bold">{editingUser.creditLimit ? formatPeso(editingUser.creditLimit) : 'Not set'}</span></div>
-            </div>
-            <div className="form-control">
-              <label className="label"><span className="label-text font-semibold">New Credit Limit (₱)</span></label>
-              <input type="number" value={newCreditLimit} onChange={e => setNewCreditLimit(e.target.value)}
-                className="input input-bordered" placeholder="Enter amount" min="0" step="100" />
-              <label className="label"><span className="label-text-alt opacity-60">Set the maximum credit/utang limit for this customer</span></label>
-            </div>
-            <div className="modal-action">
-              <button onClick={() => setShowCreditModal(false)} className="btn btn-ghost">Cancel</button>
-              <button onClick={updateCreditLimit} className="btn btn-primary">💾 Update Limit</button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {showUserModal && (
         <div className="modal modal-open">
           <div className="modal-box">
@@ -1766,145 +1855,13 @@ const AdminDashboard = () => {
         </div>
       )}
 
-      {showDebtDetailModal && selectedDebt && (
-        <div className="modal modal-open">
-          <div className="modal-box max-w-3xl">
-            <button onClick={() => setShowDebtDetailModal(false)} className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
-            <h3 className="font-bold text-xl mb-4">📋 Debt Details</h3>
-            
-            {/* Customer Info */}
-            <div className="bg-base-200 rounded-lg p-4 mb-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <div className="text-xs opacity-60">Customer</div>
-                  <div className="font-semibold">{selectedDebt.customer?.firstName} {selectedDebt.customer?.lastName}</div>
-                  <div className="text-xs opacity-60">{selectedDebt.customer?.email}</div>
-                </div>
-                <div>
-                  <div className="text-xs opacity-60">Phone</div>
-                  <div className="font-semibold">{selectedDebt.customer?.phone || '-'}</div>
-                </div>
-                <div>
-                  <div className="text-xs opacity-60">Created</div>
-                  <div className="font-semibold">{formatDate(selectedDebt.createdAt)}</div>
-                </div>
-                <div>
-                  <div className="text-xs opacity-60">Status</div>
-                  <div>
-                    <span className={`badge ${selectedDebt.status === 'paid' ? 'badge-success' : selectedDebt.status === 'partial' ? 'badge-warning' : 'badge-error'}`}>
-                      {selectedDebt.status === 'paid' ? '✅ Paid' : selectedDebt.status === 'partial' ? '⏳ Partial' : '❌ Pending'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Financial Summary */}
-            <div className="grid grid-cols-3 gap-3 mb-4">
-              <div className="card bg-base-200 shadow-sm p-3">
-                <div className="text-xs opacity-60">Total Amount</div>
-                <div className="text-lg font-bold">{formatPeso(selectedDebt.totalAmount)}</div>
-              </div>
-              <div className="card bg-success/10 shadow-sm p-3">
-                <div className="text-xs opacity-60">Amount Paid</div>
-                <div className="text-lg font-bold text-success">{formatPeso(selectedDebt.paidAmount)}</div>
-              </div>
-              <div className="card bg-error/10 shadow-sm p-3">
-                <div className="text-xs opacity-60">Remaining Balance</div>
-                <div className="text-lg font-bold text-error">{formatPeso(selectedDebt.remainingBalance)}</div>
-              </div>
-            </div>
-
-            {/* Items List */}
-            {selectedDebt.items && selectedDebt.items.length > 0 && (
-              <div className="mb-4">
-                <h4 className="font-semibold mb-2">📦 Items</h4>
-                <div className="overflow-x-auto bg-base-100 rounded-lg">
-                  <table className="table table-sm">
-                    <thead>
-                      <tr>
-                        <th>Product</th>
-                        <th className="text-right">Qty</th>
-                        <th className="text-right">Unit Price</th>
-                        <th className="text-right">Subtotal</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedDebt.items.map((item, idx) => (
-                        <tr key={idx}>
-                          <td className="font-medium">{item.productName}</td>
-                          <td className="text-right">{item.quantity}</td>
-                          <td className="text-right">{formatPeso(item.unitPrice)}</td>
-                          <td className="text-right font-semibold">{formatPeso(item.subtotal)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* Description */}
-            {selectedDebt.description && (
-              <div className="mb-4">
-                <h4 className="font-semibold mb-2">📝 Description</h4>
-                <div className="bg-base-100 rounded-lg p-3">
-                  <p className="text-sm">{selectedDebt.description}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Notes */}
-            {selectedDebt.notes && (
-              <div className="mb-4">
-                <h4 className="font-semibold mb-2">📌 Notes</h4>
-                <div className="bg-base-100 rounded-lg p-3">
-                  <p className="text-sm">{selectedDebt.notes}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Payment History */}
-            {selectedDebt.payments && selectedDebt.payments.length > 0 && (
-              <div className="mb-4">
-                <h4 className="font-semibold mb-2">💵 Payment History</h4>
-                <div className="space-y-2">
-                  {selectedDebt.payments.map((payment, idx) => (
-                    <div key={idx} className="bg-success/10 rounded-lg p-3 flex justify-between items-center">
-                      <div>
-                        <div className="font-semibold text-success">{formatPeso(payment.amount)}</div>
-                        <div className="text-xs opacity-60">{formatDateTime(payment.paidAt)}</div>
-                        {payment.notes && <div className="text-xs mt-1">{payment.notes}</div>}
-                      </div>
-                      <div className="text-right">
-                        <div className="badge badge-sm badge-success">{payment.method || 'cash'}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="modal-action">
-              <button onClick={() => setShowDebtDetailModal(false)} className="btn btn-ghost">Close</button>
-              {selectedDebt.status !== 'paid' && (
-                <button onClick={() => { setShowDebtDetailModal(false); openPayModal(selectedDebt); }} 
-                  className="btn btn-success">💵 Record Payment</button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
       {showActivityModal && selectedActivity && (
         <div className="modal modal-open">
           <div className="modal-box">
             <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
               <span>
                 {selectedActivity.category === 'sale' ? '💰' : 
-                 selectedActivity.category === 'inventory' ? '📦' : 
-                 selectedActivity.category === 'debt' ? '📋' : 
-                 selectedActivity.category === 'payment' ? '💵' : '👤'}
+                 selectedActivity.category === 'inventory' ? '📦' : '👤'}
               </span>
               Activity Details
             </h3>
@@ -1974,8 +1931,8 @@ const AdminDashboard = () => {
                 <div>
                   <div className="text-xs opacity-60">Payment Method</div>
                   <div>
-                    <span className={`badge badge-sm ${selectedTransaction.paymentMethod === 'cash' ? 'badge-success' : selectedTransaction.paymentMethod === 'credit' ? 'badge-warning' : 'badge-info'}`}>
-                      {selectedTransaction.paymentMethod === 'cash' ? '💵 Cash' : selectedTransaction.paymentMethod === 'credit' ? '📋 Utang' : '💵📋 Split'}
+                    <span className="badge badge-sm badge-success">
+                      💵 Cash
                     </span>
                   </div>
                 </div>

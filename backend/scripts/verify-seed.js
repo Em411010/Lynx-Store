@@ -12,7 +12,6 @@ import User from '../models/User.js';
 import Category from '../models/Category.js';
 import Product from '../models/Product.js';
 import Transaction from '../models/Transaction.js';
-import Debt from '../models/Debt.js';
 
 const connectDB = async () => {
   try {
@@ -56,9 +55,6 @@ const verifyData = async () => {
 
     // Transactions
     const transactionCount = await Transaction.countDocuments();
-    const cashTransactions = await Transaction.countDocuments({ paymentMethod: 'cash' });
-    const creditTransactions = await Transaction.countDocuments({ paymentMethod: 'credit' });
-    const splitTransactions = await Transaction.countDocuments({ paymentMethod: 'split' });
     
     const totalSales = await Transaction.aggregate([
       { $group: { _id: null, total: { $sum: '$totalAmount' } } }
@@ -69,11 +65,8 @@ const verifyData = async () => {
     
     console.log('\n💰 TRANSACTIONS:');
     console.log(`   Total:     ${transactionCount}`);
-    console.log(`   Cash:      ${cashTransactions}`);
-    console.log(`   Credit:    ${creditTransactions}`);
-    console.log(`   Split:     ${splitTransactions}`);
     console.log(`   Total Sales: ₱${totalSales[0]?.total.toFixed(2) || 0}`);
-    console.log(`   Date Range: ${oldestTransaction?.createdAt.toLocaleDateString()} - ${newestTransaction?.createdAt.toLocaleDateString()}`);
+    console.log(`   Date Range: ${oldestTransaction?.createdAt.toLocaleDateString()} - ${newestTransaction?.createdAt.toLocaleDateString()}`);;
 
     // Monthly sales
     const monthlySales = await Transaction.aggregate([
@@ -95,34 +88,6 @@ const verifyData = async () => {
       const monthName = new Date(month._id.year, month._id.month - 1).toLocaleString('default', { month: 'short', year: 'numeric' });
       console.log(`   ${monthName}: ₱${month.total.toFixed(2)} (${month.count} transactions)`);
     });
-
-    // Debts
-    const debtCount = await Debt.countDocuments();
-    const paidDebts = await Debt.countDocuments({ status: 'paid' });
-    const partialDebts = await Debt.countDocuments({ status: 'partial' });
-    const pendingDebts = await Debt.countDocuments({ status: 'pending' });
-    
-    const debtStats = await Debt.aggregate([
-      {
-        $group: {
-          _id: null,
-          totalDebt: { $sum: '$totalAmount' },
-          totalPaid: { $sum: '$paidAmount' },
-          totalRemaining: { $sum: { $subtract: ['$totalAmount', '$paidAmount'] } }
-        }
-      }
-    ]);
-
-    console.log('\n💳 DEBTS:');
-    console.log(`   Total Debts:    ${debtCount}`);
-    console.log(`   Paid:           ${paidDebts}`);
-    console.log(`   Partial:        ${partialDebts}`);
-    console.log(`   Pending:        ${pendingDebts}`);
-    if (debtStats[0]) {
-      console.log(`   Total Amount:   ₱${debtStats[0].totalDebt.toFixed(2)}`);
-      console.log(`   Total Paid:     ₱${debtStats[0].totalPaid.toFixed(2)}`);
-      console.log(`   Remaining:      ₱${debtStats[0].totalRemaining.toFixed(2)}`);
-    }
 
     // Top customers by purchases
     const topCustomers = await Transaction.aggregate([
@@ -152,40 +117,6 @@ const verifyData = async () => {
       console.log(`   ${index + 1}. ${customer.customer.firstName} ${customer.customer.lastName}`);
       console.log(`      Spent: ₱${customer.totalSpent.toFixed(2)} (${customer.transactionCount} transactions)`);
     });
-
-    // Customer debts
-    const customersWithDebts = await Debt.aggregate([
-      { $match: { status: { $in: ['pending', 'partial'] } } },
-      {
-        $group: {
-          _id: '$customer',
-          totalDebt: { $sum: '$totalAmount' },
-          totalPaid: { $sum: '$paidAmount' },
-          remaining: { $sum: { $subtract: ['$totalAmount', '$paidAmount'] } },
-          debtCount: { $sum: 1 }
-        }
-      },
-      { $sort: { remaining: -1 } },
-      {
-        $lookup: {
-          from: 'users',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'customer'
-        }
-      },
-      { $unwind: '$customer' }
-    ]);
-
-    console.log('\n📋 CUSTOMERS WITH OUTSTANDING DEBTS:');
-    if (customersWithDebts.length === 0) {
-      console.log('   No outstanding debts');
-    } else {
-      customersWithDebts.forEach((customer, index) => {
-        console.log(`   ${index + 1}. ${customer.customer.firstName} ${customer.customer.lastName}`);
-        console.log(`      Debt: ₱${customer.totalDebt.toFixed(2)} | Paid: ₱${customer.totalPaid.toFixed(2)} | Remaining: ₱${customer.remaining.toFixed(2)}`);
-      });
-    }
 
     console.log('\n' + '='.repeat(60));
     console.log('\n✅ Verification complete!\n');

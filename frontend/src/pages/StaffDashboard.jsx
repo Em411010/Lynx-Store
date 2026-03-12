@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useEffect, useState, useCallback } from 'react';
 import { api, formatPeso, formatDate, formatDateTime } from '../utils/api';
 import ThemeToggle from '../components/ThemeToggle';
+import toast, { Toaster } from 'react-hot-toast';
 
 const StaffDashboard = () => {
   const navigate = useNavigate();
@@ -15,24 +16,18 @@ const StaffDashboard = () => {
   const [posSearch, setPosSearch] = useState('');
   const [posCategory, setPosCategory] = useState('');
   const [cart, setCart] = useState([]);
+  const [cartQtyInputs, setCartQtyInputs] = useState({});
   const [paymentMethod, setPaymentMethod] = useState('cash');
+  // Live clock
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
   const [cashReceived, setCashReceived] = useState('');
   const [customers, setCustomers] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState('');
-  const [customerSearch, setCustomerSearch] = useState('');
   const [showReceipt, setShowReceipt] = useState(null);
-
-  // Utang State
-  const [debts, setDebts] = useState([]);
-  const [debtFilter, setDebtFilter] = useState('pending');
-  const [debtSearch, setDebtSearch] = useState('');
-  const [showPayModal, setShowPayModal] = useState(false);
-  const [payingDebt, setPayingDebt] = useState(null);
-  const [payAmount, setPayAmount] = useState('');  
-  const [showAddDebtModal, setShowAddDebtModal] = useState(false);
-  const [debtForm, setDebtForm] = useState({ customer: '', description: '', totalAmount: '' });
-  const [showDebtDetailModal, setShowDebtDetailModal] = useState(false);
-  const [selectedDebt, setSelectedDebt] = useState(null);
 
   // Barcode scanner state
   const [barcodeInput, setBarcodeInput] = useState('');
@@ -73,20 +68,9 @@ const StaffDashboard = () => {
 
   const loadCustomers = useCallback(async () => {
     try {
-      let url = '/users/customers';
-      if (customerSearch) url += `?search=${customerSearch}`;
-      setCustomers(await api.get(url));
+      setCustomers(await api.get('/users/customers'));
     } catch (e) { console.error(e); }
-  }, [customerSearch]);
-
-  const loadDebts = useCallback(async () => {
-    try {
-      let url = '/debts?';
-      if (debtFilter !== 'all') url += `status=${debtFilter}&`;
-      if (debtSearch) url += `search=${debtSearch}&`;
-      setDebts(await api.get(url));
-    } catch (e) { console.error(e); }
-  }, [debtFilter, debtSearch]);
+  }, []);
 
   const loadMyTransactions = useCallback(async () => {
     try {
@@ -103,10 +87,9 @@ const StaffDashboard = () => {
   useEffect(() => {
     if (!user) return;
     if (activeTab === 'pos') { loadProducts(); loadCategories(); loadCustomers(); }
-    if (activeTab === 'utang') { loadDebts(); loadCustomers(); }
     if (activeTab === 'history') loadMyTransactions();
     if (activeTab === 'products') { loadProducts(); loadCategories(); }
-  }, [user, activeTab, loadProducts, loadCategories, loadCustomers, loadDebts, loadMyTransactions]);
+  }, [user, activeTab, loadProducts, loadCategories, loadCustomers, loadMyTransactions]);
 
   const handleLogout = () => { localStorage.removeItem('user'); navigate('/'); };
 
@@ -114,15 +97,26 @@ const StaffDashboard = () => {
   const addToCart = (product, isTingi = false) => {
     const price = isTingi ? product.tingiPrice : product.unitPrice;
     const cartKey = `${product._id}_${isTingi ? 'tingi' : 'whole'}`;
+    const maxStock = isTingi
+      ? Math.floor(product.stock * (product.tingiPerPack || 1))
+      : Math.floor(product.stock);
     const existing = cart.find(item => item.cartKey === cartKey);
 
     if (existing) {
+      if (existing.quantity + 1 > maxStock) {
+        toast.error(`Only ${maxStock} in stock for "${product.name}"${isTingi ? ' (Tingi)' : ''}!`);
+        return;
+      }
       setCart(cart.map(item =>
         item.cartKey === cartKey
           ? { ...item, quantity: item.quantity + 1, subtotal: (item.quantity + 1) * item.unitPrice }
           : item
       ));
     } else {
+      if (maxStock <= 0) {
+        toast.error(`"${product.name}" is out of stock!`);
+        return;
+      }
       setCart([...cart, {
         cartKey,
         product: product._id,
@@ -131,7 +125,7 @@ const StaffDashboard = () => {
         unitPrice: price,
         subtotal: price,
         isTingi,
-        maxStock: isTingi ? product.stock * (product.tingiPerPack || 1) : product.stock
+        maxStock
       }]);
     }
   };
@@ -140,10 +134,15 @@ const StaffDashboard = () => {
     if (qty <= 0) {
       setCart(cart.filter(item => item.cartKey !== cartKey));
     } else {
-      setCart(cart.map(item =>
-        item.cartKey === cartKey
-          ? { ...item, quantity: qty, subtotal: qty * item.unitPrice }
-          : item
+      const item = cart.find(i => i.cartKey === cartKey);
+      if (item && qty > item.maxStock) {
+        toast.error(`Only ${item.maxStock} in stock for "${item.productName}"!`);
+        return;
+      }
+      setCart(cart.map(i =>
+        i.cartKey === cartKey
+          ? { ...i, quantity: qty, subtotal: qty * i.unitPrice }
+          : i
       ));
     }
   };
@@ -157,11 +156,14 @@ const StaffDashboard = () => {
 
   const processTransaction = async () => {
     if (cart.length === 0) { showAlertMsg('Cart is empty!', 'error'); return; }
-    if (paymentMethod === 'credit' && !selectedCustomer) {
-      showAlertMsg('Select a customer for credit', 'error'); return;
-    }
     if (paymentMethod === 'cash' && Number(cashReceived) < cartTotal) {
       showAlertMsg('Insufficient payment!', 'error'); return;
+    }
+    // Stock validation before posting
+    const overStock = cart.find(item => item.quantity > item.maxStock);
+    if (overStock) {
+      toast.error(`"${overStock.productName}" only has ${overStock.maxStock} in stock!`);
+      return;
     }
 
     try {
@@ -179,8 +181,7 @@ const StaffDashboard = () => {
           ? customers.find(c => c._id === selectedCustomer)?.firstName + ' ' + customers.find(c => c._id === selectedCustomer)?.lastName
           : 'Walk-in',
         paymentMethod,
-        cashReceived: paymentMethod === 'cash' ? Number(cashReceived) : 0,
-        creditAmount: paymentMethod === 'credit' ? cartTotal : 0
+        cashReceived: paymentMethod === 'cash' ? Number(cashReceived) : 0
       };
 
       const result = await api.post('/transactions', payload);
@@ -191,22 +192,6 @@ const StaffDashboard = () => {
       setPaymentMethod('cash');
       showAlertMsg('Sale processed!');
       loadProducts();
-    } catch (e) { showAlertMsg(e.message, 'error'); }
-  };
-
-  // Debt functions
-  const openPayModal = (debt) => {
-    setPayingDebt(debt);
-    setPayAmount('');
-    setShowPayModal(true);
-  };
-
-  const processPayment = async () => {
-    try {
-      await api.post(`/debts/${payingDebt._id}/pay`, { amount: Number(payAmount), method: 'cash' });
-      showAlertMsg('Payment recorded!');
-      setShowPayModal(false);
-      loadDebts();
     } catch (e) { showAlertMsg(e.message, 'error'); }
   };
 
@@ -236,36 +221,23 @@ const StaffDashboard = () => {
     }
   };
 
-  const addManualDebt = async () => {
-    try {
-      await api.post('/debts', {
-        customer: debtForm.customer,
-        description: debtForm.description,
-        totalAmount: Number(debtForm.totalAmount),
-        items: []
-      });
-      showAlertMsg('Debt added!');
-      setShowAddDebtModal(false);
-      setDebtForm({ customer: '', description: '', totalAmount: '' });
-      loadDebts();
-    } catch (e) { showAlertMsg(e.message, 'error'); }
-  };
-
   if (!user) return null;
 
   const tabs = [
     { key: 'pos', label: '🛒 Sales' },
-    { key: 'utang', label: '📋 Debts' },
     { key: 'products', label: '📦 Products' },
     { key: 'history', label: '📜 History' },
   ];
 
   return (
     <div className="min-h-screen bg-base-200 flex">
+      <Toaster position="top-center" toastOptions={{ duration: 3000 }} />
       <div className="w-1/4 md:w-52 bg-base-100 shadow-xl flex flex-col min-h-screen">
         <div className="p-4 border-b border-base-300">
           <h2 className="font-bold text-xs md:text-lg">🏪 Lynx Store</h2>
           <p className="text-[10px] md:text-xs opacity-60">Staff Panel</p>
+          <p className="text-[8px] md:text-xs opacity-50 mt-0.5 tabular-nums">{now.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+          <p className="text-[9px] md:text-sm font-mono font-semibold tabular-nums">{now.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</p>
         </div>
         <nav className="flex-1 p-1 md:p-2">
           {tabs.map(tab => (
@@ -331,7 +303,7 @@ const StaffDashboard = () => {
                           )}
                         </div>
                         <span className={`badge badge-[9px] md:badge-xs ${p.isLowStock ? 'badge-warning' : 'badge-ghost'}`}>
-                          {p.stock}
+                          {Math.floor(p.stock)}
                         </span>
                       </div>
                       <div className="flex gap-1 mt-2">
@@ -382,7 +354,24 @@ const StaffDashboard = () => {
                           <div className="flex items-center gap-1">
                             <button onClick={() => updateCartQty(item.cartKey, item.quantity - 1)}
                               className="btn btn-xs btn-circle btn-ghost h-6 w-6 min-h-0">-</button>
-                            <span className="font-bold text-xs md:text-sm w-6 text-center">{item.quantity}</span>
+                            <input
+                              type="number"
+                              min={1}
+                              max={item.maxStock}
+                              value={cartQtyInputs[item.cartKey] ?? item.quantity}
+                              onChange={e => {
+                                const raw = e.target.value;
+                                setCartQtyInputs(prev => ({ ...prev, [item.cartKey]: raw }));
+                                const v = parseInt(raw, 10);
+                                if (!isNaN(v) && v >= 0) updateCartQty(item.cartKey, v);
+                              }}
+                              onBlur={e => {
+                                const v = parseInt(e.target.value, 10);
+                                if (isNaN(v) || v <= 0) updateCartQty(item.cartKey, 0);
+                                setCartQtyInputs(prev => { const n = { ...prev }; delete n[item.cartKey]; return n; });
+                              }}
+                              className="font-bold text-xs md:text-sm w-10 text-center input input-xs border border-base-300 rounded px-1"
+                            />
                             <button onClick={() => updateCartQty(item.cartKey, item.quantity + 1)}
                               className="btn btn-xs btn-circle btn-ghost h-6 w-6 min-h-0">+</button>
                           </div>
@@ -401,44 +390,22 @@ const StaffDashboard = () => {
                 </div>
 
                 <div className="flex gap-1">
-                  {[
-                    { key: 'cash', label: '💵 Cash' },
-                    { key: 'credit', label: '📋 Credit' }
-                  ].map(pm => (
-                    <button key={pm.key} onClick={() => setPaymentMethod(pm.key)}
-                      className={`btn btn-xs md:btn-sm flex-1 ${paymentMethod === pm.key ? 'btn-primary' : 'btn-ghost'}`}>
-                      {pm.label}
-                    </button>
-                  ))}
+                  <button onClick={() => setPaymentMethod('cash')}
+                    className="btn btn-xs md:btn-sm flex-1 btn-primary">
+                    💵 Cash
+                  </button>
                 </div>
 
-                {paymentMethod === 'cash' && (
-                  <div>
-                    <input type="number" placeholder="Amount paid (₱)" value={cashReceived}
-                      onChange={e => setCashReceived(e.target.value)}
-                      className="input input-bordered input-xs md:input-sm w-full" />
-                    {changeAmount > 0 && (
-                      <div className="text-right text-[10px] md:text-sm mt-1">
-                        Change: <span className="font-bold text-success">{formatPeso(changeAmount)}</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {paymentMethod === 'credit' && (
-                  <div>
-                    <input type="text" placeholder="🔍 Search customer..." value={customerSearch}
-                      onChange={e => { setCustomerSearch(e.target.value); loadCustomers(); }}
-                      className="input input-bordered input-xs md:input-sm w-full mb-1" />
-                    <select value={selectedCustomer} onChange={e => setSelectedCustomer(e.target.value)}
-                      className="select select-bordered select-xs md:select-sm w-full">
-                      <option value="">Select customer</option>
-                      {customers.map(c => (
-                        <option key={c._id} value={c._id}>{c.firstName} {c.lastName}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
+                <div>
+                  <input type="number" placeholder="Amount paid (₱)" value={cashReceived}
+                    onChange={e => setCashReceived(e.target.value)}
+                    className="input input-bordered input-xs md:input-sm w-full" />
+                  {changeAmount > 0 && (
+                    <div className="text-right text-[10px] md:text-sm mt-1">
+                      Change: <span className="font-bold text-success">{formatPeso(changeAmount)}</span>
+                    </div>
+                  )}
+                </div>
 
                 <button onClick={processTransaction}
                   className="btn btn-sm md:btn-md btn-success w-full"
@@ -446,72 +413,6 @@ const StaffDashboard = () => {
                   ✅ Process Sale
                 </button>
               </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'utang' && (
-          <div className="p-2 md:p-4">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg md:text-xl font-bold"><span className="text-base md:text-xl">📋</span> Debt List</h2>
-              <button onClick={() => { setShowAddDebtModal(true); loadCustomers(); }} className="btn btn-warning btn-xs md:btn-sm">
-                + Add Debt
-              </button>
-            </div>
-
-            <div className="flex gap-2 mb-3">
-              <input type="text" placeholder="🔍 Search..." value={debtSearch}
-                onChange={e => setDebtSearch(e.target.value)} className="input input-bordered input-xs md:input-sm flex-1 md:w-64" />
-            </div>
-
-            <div className="flex flex-wrap gap-1 mb-4">
-              {['all', 'pending', 'partial', 'paid'].map(s => (
-                <button key={s} onClick={() => setDebtFilter(s)}
-                  className={`btn btn-[10px] md:btn-sm ${debtFilter === s ? 'btn-primary' : 'btn-ghost'} h-auto py-1.5 min-h-0`}>
-                  {s === 'all' ? 'All' : s === 'pending' ? 'Unpaid' : s === 'partial' ? 'Partial' : 'Paid'}
-                </button>
-              ))}
-            </div>
-
-            <div className="overflow-x-auto bg-base-100 rounded-xl shadow">
-              <table className="table table-[10px] md:table-sm">
-                <thead>
-                  <tr>
-                    <th>Customer</th>
-                    <th className="hidden md:table-cell">Items</th>
-                    <th>Remaining</th>
-                    <th>Status</th>
-                    <th className="hidden sm:table-cell">Date</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {debts.map(d => (
-                    <tr key={d._id} className={`cursor-pointer hover:bg-base-200 ${d.agingCategory === '60+ araw' ? 'bg-error/10' : ''}`}
-                        onClick={() => { setSelectedDebt(d); setShowDebtDetailModal(true); }}>
-                      <td className="font-semibold">{d.customer?.firstName}</td>
-                      <td className="text-[9px] max-w-24 truncate hidden md:table-cell">
-                        {d.items.length > 0 ? d.items.map(i => `${i.productName} x${i.quantity}`).join(', ') : d.description || '-'}
-                      </td>
-                      <td className="font-bold text-error">{formatPeso(d.remainingBalance)}</td>
-                      <td>
-                        <span className={`badge badge-[9px] md:badge-sm ${d.status === 'paid' ? 'badge-success' : d.status === 'partial' ? 'badge-warning' : 'badge-error'}`}>
-                          {d.status === 'paid' ? 'Paid' : d.status === 'partial' ? 'Partial' : 'Unpaid'}
-                        </span>
-                      </td>
-                      <td className="text-[9px] hidden sm:table-cell">{formatDate(d.createdAt)}</td>
-                      <td onClick={(e) => e.stopPropagation()}>
-                        {d.status !== 'paid' && (
-                          <button onClick={() => openPayModal(d)} className="btn btn-xs btn-success py-0 h-6 min-h-0">Pay</button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                  {debts.length === 0 && (
-                    <tr><td colSpan="6" className="text-center py-8 opacity-60 text-xs">No debt records</td></tr>
-                  )}
-                </tbody>
-              </table>
             </div>
           </div>
         )}
@@ -544,7 +445,7 @@ const StaffDashboard = () => {
                       <td className="text-[10px] md:text-sm">{formatPeso(p.unitPrice)}</td>
                       <td>
                         <span className={`badge badge-[9px] md:badge-sm ${p.isLowStock ? 'badge-warning' : 'badge-success'}`}>
-                          {p.stock}
+                          {Math.floor(p.stock)}
                         </span>
                       </td>
                       <td className={`text-[9px] hidden md:table-cell ${p.isExpired ? 'text-error' : p.isNearExpiry ? 'text-warning' : ''}`}>
@@ -631,232 +532,14 @@ const StaffDashboard = () => {
               </div>
               <div className="flex justify-between text-sm">
                 <span>Payment:</span>
-                <span className={showReceipt.paymentMethod === 'cash' ? 'text-success' : 'text-warning'}>
-                  {showReceipt.paymentMethod === 'cash' ? '💵 Cash' : '📋 Utang'}
-                </span>
+                <span className="text-success">💵 Cash</span>
               </div>
-              {showReceipt.paymentMethod === 'cash' && (
-                <>
-                  <div className="flex justify-between text-sm"><span>Cash:</span><span>{formatPeso(showReceipt.cashReceived)}</span></div>
-                  <div className="flex justify-between text-sm"><span>Change:</span><span className="text-success">{formatPeso(showReceipt.changeAmount)}</span></div>
-                </>
-              )}
+              <div className="flex justify-between text-sm"><span>Cash:</span><span>{formatPeso(showReceipt.cashReceived)}</span></div>
+              <div className="flex justify-between text-sm"><span>Change:</span><span className="text-success">{formatPeso(showReceipt.changeAmount)}</span></div>
             </div>
             <div className="text-center mt-4 text-xs opacity-60">Thank you for your purchase!</div>
             <div className="modal-action">
               <button onClick={() => setShowReceipt(null)} className="btn btn-primary">OK</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showPayModal && payingDebt && (
-        <div className="modal modal-open">
-          <div className="modal-box">
-            <h3 className="font-bold text-lg mb-4">💵 Receive Payment</h3>
-            <div className="bg-base-200 p-3 rounded-lg mb-4">
-              <p><strong>Customer:</strong> {payingDebt.customer?.firstName} {payingDebt.customer?.lastName}</p>
-              <p><strong>Total Debt:</strong> {formatPeso(payingDebt.totalAmount)}</p>
-              <p><strong>Amount Paid:</strong> {formatPeso(payingDebt.paidAmount)}</p>
-              <p className="text-lg font-bold text-error"><strong>Remaining:</strong> {formatPeso(payingDebt.remainingBalance)}</p>
-            </div>
-
-            {/* Payment history */}
-            {payingDebt.payments?.length > 0 && (
-              <div className="mb-3">
-                <p className="text-sm font-semibold mb-1">Payment History:</p>
-                <div className="space-y-1">
-                  {payingDebt.payments.map((p, i) => (
-                    <div key={i} className="text-xs flex justify-between bg-base-200 p-1 rounded">
-                      <span>{formatDateTime(p.paidAt)}</span>
-                      <span className="text-success font-semibold">{formatPeso(p.amount)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="form-control mb-3">
-              <label className="label"><span className="label-text">Payment Amount (₱)</span></label>
-              <input type="number" value={payAmount} onChange={e => setPayAmount(e.target.value)}
-                className="input input-bordered input-lg text-center" placeholder="0.00" />
-            </div>
-            <div className="flex gap-2 mb-3">
-              <button onClick={() => setPayAmount(payingDebt.remainingBalance)} className="btn btn-sm btn-outline">Full Payment</button>
-              <button onClick={() => setPayAmount(Math.ceil(payingDebt.remainingBalance / 2))} className="btn btn-sm btn-outline">Half</button>
-            </div>
-            <div className="modal-action">
-              <button onClick={() => setShowPayModal(false)} className="btn btn-ghost">Cancel</button>
-              <button onClick={processPayment} className="btn btn-success" disabled={!payAmount || Number(payAmount) <= 0}>
-                ✅ Record Payment
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showAddDebtModal && (
-        <div className="modal modal-open">
-          <div className="modal-box">
-            <h3 className="font-bold text-lg mb-4">📋 Add Debt</h3>
-            <div className="space-y-3">
-              <div className="form-control">
-                <label className="label"><span className="label-text">Customer *</span></label>
-                <select value={debtForm.customer} onChange={e => setDebtForm({...debtForm, customer: e.target.value})}
-                  className="select select-bordered">
-                  <option value="">Select customer</option>
-                  {customers.map(c => <option key={c._id} value={c._id}>{c.firstName} {c.lastName}</option>)}
-                </select>
-              </div>
-              <div className="form-control">
-                <label className="label"><span className="label-text">Description / What was purchased?</span></label>
-                <input type="text" value={debtForm.description}
-                  onChange={e => setDebtForm({...debtForm, description: e.target.value})}
-                  className="input input-bordered" placeholder="e.g. 2 bigas, 1 sardinas" />
-              </div>
-              <div className="form-control">
-                <label className="label"><span className="label-text">Total Amount (₱) *</span></label>
-                <input type="number" value={debtForm.totalAmount}
-                  onChange={e => setDebtForm({...debtForm, totalAmount: e.target.value})}
-                  className="input input-bordered input-lg text-center" placeholder="0.00" />
-              </div>
-            </div>
-            <div className="modal-action">
-              <button onClick={() => setShowAddDebtModal(false)} className="btn btn-ghost">Cancel</button>
-              <button onClick={addManualDebt} className="btn btn-warning"
-                disabled={!debtForm.customer || !debtForm.totalAmount}>
-                📋 Record Debt
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showDebtDetailModal && selectedDebt && (
-        <div className="modal modal-open">
-          <div className="modal-box max-w-3xl">
-            <button onClick={() => setShowDebtDetailModal(false)} className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
-            <h3 className="font-bold text-xl mb-4">📋 Debt Details</h3>
-            
-            {/* Customer Info */}
-            <div className="bg-base-200 rounded-lg p-4 mb-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <div className="text-xs opacity-60">Customer</div>
-                  <div className="font-semibold">{selectedDebt.customer?.firstName} {selectedDebt.customer?.lastName}</div>
-                  <div className="text-xs opacity-60">{selectedDebt.customer?.email}</div>
-                </div>
-                <div>
-                  <div className="text-xs opacity-60">Phone</div>
-                  <div className="font-semibold">{selectedDebt.customer?.phone || '-'}</div>
-                </div>
-                <div>
-                  <div className="text-xs opacity-60">Created</div>
-                  <div className="font-semibold">{formatDate(selectedDebt.createdAt)}</div>
-                </div>
-                <div>
-                  <div className="text-xs opacity-60">Status</div>
-                  <div>
-                    <span className={`badge ${selectedDebt.status === 'paid' ? 'badge-success' : selectedDebt.status === 'partial' ? 'badge-warning' : 'badge-error'}`}>
-                      {selectedDebt.status === 'paid' ? '✅ Paid' : selectedDebt.status === 'partial' ? '⏳ Partial' : '❌ Pending'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Financial Summary */}
-            <div className="grid grid-cols-3 gap-3 mb-4">
-              <div className="card bg-base-200 shadow-sm p-3">
-                <div className="text-xs opacity-60">Total Amount</div>
-                <div className="text-lg font-bold">{formatPeso(selectedDebt.totalAmount)}</div>
-              </div>
-              <div className="card bg-success/10 shadow-sm p-3">
-                <div className="text-xs opacity-60">Amount Paid</div>
-                <div className="text-lg font-bold text-success">{formatPeso(selectedDebt.paidAmount)}</div>
-              </div>
-              <div className="card bg-error/10 shadow-sm p-3">
-                <div className="text-xs opacity-60">Remaining Balance</div>
-                <div className="text-lg font-bold text-error">{formatPeso(selectedDebt.remainingBalance)}</div>
-              </div>
-            </div>
-
-            {/* Items List */}
-            {selectedDebt.items && selectedDebt.items.length > 0 && (
-              <div className="mb-4">
-                <h4 className="font-semibold mb-2">📦 Items</h4>
-                <div className="overflow-x-auto bg-base-100 rounded-lg">
-                  <table className="table table-sm">
-                    <thead>
-                      <tr>
-                        <th>Product</th>
-                        <th className="text-right">Qty</th>
-                        <th className="text-right">Unit Price</th>
-                        <th className="text-right">Subtotal</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedDebt.items.map((item, idx) => (
-                        <tr key={idx}>
-                          <td className="font-medium">{item.productName}</td>
-                          <td className="text-right">{item.quantity}</td>
-                          <td className="text-right">{formatPeso(item.unitPrice)}</td>
-                          <td className="text-right font-semibold">{formatPeso(item.subtotal)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* Description */}
-            {selectedDebt.description && (
-              <div className="mb-4">
-                <h4 className="font-semibold mb-2">📝 Description</h4>
-                <div className="bg-base-100 rounded-lg p-3">
-                  <p className="text-sm">{selectedDebt.description}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Notes */}
-            {selectedDebt.notes && (
-              <div className="mb-4">
-                <h4 className="font-semibold mb-2">📌 Notes</h4>
-                <div className="bg-base-100 rounded-lg p-3">
-                  <p className="text-sm">{selectedDebt.notes}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Payment History */}
-            {selectedDebt.payments && selectedDebt.payments.length > 0 && (
-              <div className="mb-4">
-                <h4 className="font-semibold mb-2">💵 Payment History</h4>
-                <div className="space-y-2">
-                  {selectedDebt.payments.map((payment, idx) => (
-                    <div key={idx} className="bg-success/10 rounded-lg p-3 flex justify-between items-center">
-                      <div>
-                        <div className="font-semibold text-success">{formatPeso(payment.amount)}</div>
-                        <div className="text-xs opacity-60">{formatDateTime(payment.paidAt)}</div>
-                        {payment.notes && <div className="text-xs mt-1">{payment.notes}</div>}
-                      </div>
-                      <div className="text-right">
-                        <div className="badge badge-sm badge-success">{payment.method || 'cash'}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="modal-action">
-              <button onClick={() => setShowDebtDetailModal(false)} className="btn btn-ghost">Close</button>
-              {selectedDebt.status !== 'paid' && (
-                <button onClick={() => { setShowDebtDetailModal(false); openPayModal(selectedDebt); }} 
-                  className="btn btn-success">💵 Record Payment</button>
-              )}
             </div>
           </div>
         </div>
@@ -884,12 +567,10 @@ const StaffDashboard = () => {
                 <div>
                   <div className="text-xs opacity-60">Payment Method</div>
                   <div>
-                    <span className={`badge badge-sm ${selectedTransaction.paymentMethod === 'cash' ? 'badge-success' : selectedTransaction.paymentMethod === 'credit' ? 'badge-warning' : 'badge-info'}`}>
-                      {selectedTransaction.paymentMethod === 'cash' ? '💵 Cash' : selectedTransaction.paymentMethod === 'credit' ? '📋 Utang' : '💵📋 Split'}
-                    </span>
+                    <span className="badge badge-sm badge-success">💵 Cash</span>
                   </div>
                 </div>
-                {selectedTransaction.paymentMethod === 'cash' && selectedTransaction.cashReceived > 0 && (
+                {selectedTransaction.cashReceived > 0 && (
                   <>
                     <div>
                       <div className="text-xs opacity-60">Cash Received</div>

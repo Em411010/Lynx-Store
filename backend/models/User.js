@@ -40,11 +40,6 @@ const userSchema = new mongoose.Schema({
     type: String,
     trim: true,
     default: ''
-  },
-  creditLimit: {
-    type: Number,
-    default: 0,
-    min: 0
   }
 }, {
   timestamps: true

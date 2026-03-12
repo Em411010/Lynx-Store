@@ -58,7 +58,7 @@ const transactionSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ['cash', 'credit', 'split'],
+    enum: ['cash'],
     required: true
   },
   cashReceived: {
@@ -67,11 +67,6 @@ const transactionSchema = new mongoose.Schema({
     min: 0
   },
   changeAmount: {
-    type: Number,
-    default: 0,
-    min: 0
-  },
-  creditAmount: {
     type: Number,
     default: 0,
     min: 0

@@ -11,10 +11,7 @@ const CustomerDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Overview State
-  const [myDebts, setMyDebts] = useState([]);
   const [myTransactions, setMyTransactions] = useState([]);
-  const [totalUtang, setTotalUtang] = useState(0);
-  const [totalBayad, setTotalBayad] = useState(0);
 
   // Feedback & Support State
   const [myFeedback, setMyFeedback] = useState([]);
@@ -34,17 +31,6 @@ const CustomerDashboard = () => {
     if (parsed.role !== 'customer') { navigate('/'); return; }
     setUser(parsed);
   }, [navigate]);
-
-  const loadDebts = useCallback(async () => {
-    try {
-      const data = await api.get('/debts/my');
-      setMyDebts(data);
-      const total = data.reduce((s, d) => s + d.totalAmount, 0);
-      const paid = data.reduce((s, d) => s + d.paidAmount, 0);
-      setTotalUtang(total);
-      setTotalBayad(paid);
-    } catch (e) { console.error(e); }
-  }, []);
 
   const loadTransactions = useCallback(async () => {
     try { setMyTransactions(await api.get('/transactions/my')); } catch (e) { console.error(e); }
@@ -101,22 +87,17 @@ const CustomerDashboard = () => {
 
   useEffect(() => {
     if (!user) return;
-    loadDebts();
     loadTransactions();
     loadFeedback();
     loadTickets();
-  }, [user, loadDebts, loadTransactions, loadFeedback, loadTickets]);
+  }, [user, loadTransactions, loadFeedback, loadTickets]);
 
   const handleLogout = () => { localStorage.removeItem('user'); navigate('/'); };
 
   if (!user) return null;
 
-  const pendingDebts = myDebts.filter(d => d.status !== 'paid');
-  const paidDebts = myDebts.filter(d => d.status === 'paid');
-
   const tabs = [
     { key: 'overview', label: '🏠 Overview' },
-    { key: 'utang', label: '📋 My Debts' },
     { key: 'history', label: '📜 History' },
     { key: 'support', label: '💬 Feedback' },
   ];
@@ -166,62 +147,17 @@ const CustomerDashboard = () => {
           <div>
             <h2 className="text-lg md:text-2xl font-bold mb-6">Welcome, {user.firstName}!</h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
-              <div className="stat bg-base-100 rounded-xl shadow p-2 md:p-4">
-                <div className="stat-title text-[10px] md:text-sm">Outstanding Debt</div>
-                <div className="stat-value text-error text-lg md:text-2xl">{formatPeso(totalUtang - totalBayad)}</div>
-                <div className="stat-desc text-[9px] md:text-xs">Remaining balance</div>
-              </div>
-              <div className="stat bg-base-100 rounded-xl shadow p-2 md:p-4">
-                <div className="stat-title text-[10px] md:text-sm">Total Paid</div>
-                <div className="stat-value text-success text-lg md:text-2xl">{formatPeso(totalBayad)}</div>
-                <div className="stat-desc text-[9px] md:text-xs">All time payments</div>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
               <div className="stat bg-base-100 rounded-xl shadow p-2 md:p-4">
                 <div className="stat-title text-[10px] md:text-sm">Purchases</div>
                 <div className="stat-value text-primary text-lg md:text-2xl">{myTransactions.length}</div>
                 <div className="stat-desc text-[9px] md:text-xs">Total transactions</div>
               </div>
-            </div>
-
-            {pendingDebts.length > 0 && (
-              <div className="alert alert-warning shadow-lg mb-6 p-2 md:p-4">
-                <div className="flex items-center gap-2">
-                  <div>
-                    <h3 className="font-bold text-xs md:text-base">You have {pendingDebts.length} pending debts</h3>
-                    <div className="text-[10px] md:text-sm">Total remaining: {formatPeso(totalUtang - totalBayad)}</div>
-                  </div>
-                </div>
-                <button onClick={() => setActiveTab('utang')} className="btn btn-xs btn-ghost">View →</button>
+              <div className="stat bg-base-100 rounded-xl shadow p-2 md:p-4">
+                <div className="stat-title text-[10px] md:text-sm">Total Spent</div>
+                <div className="stat-value text-success text-lg md:text-2xl">{formatPeso(myTransactions.reduce((s, t) => s + t.totalAmount, 0))}</div>
+                <div className="stat-desc text-[9px] md:text-xs">All time</div>
               </div>
-            )}
-
-            <div className="bg-base-100 rounded-xl shadow p-3 md:p-4 mb-6">
-              <h3 className="font-bold text-sm md:text-lg mb-3">Recent Debts</h3>
-                {pendingDebts.length === 0 ? (
-                <div className="text-center py-6 opacity-60">
-                  <p className="mt-2 text-xs md:text-base">No pending debts! Great job!</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {pendingDebts.slice(0, 5).map(d => (
-                    <div key={d._id} className="flex justify-between items-center bg-base-200 p-2 md:p-3 rounded-lg">
-                      <div className="max-w-[60%]">
-                        <div className="text-[10px] md:text-sm font-semibold truncate">
-                          {d.items.length > 0 ? d.items.map(i => i.productName).join(', ') : d.description}
-                        </div>
-                        <div className="text-[9px] md:text-xs opacity-60">{formatDate(d.createdAt)}</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-bold text-error text-[11px] md:text-base">{formatPeso(d.remainingBalance)}</div>
-                        <span className={`badge badge-[9px] md:badge-xs ${d.status === 'partial' ? 'badge-warning' : 'badge-error'}`}>
-                          {d.status === 'partial' ? 'Partial' : 'Unpaid'}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
 
             <div className="bg-base-100 rounded-xl shadow p-3 md:p-4">
@@ -240,121 +176,13 @@ const CustomerDashboard = () => {
                       </div>
                       <div className="text-right">
                         <div className="font-bold text-[11px] md:text-base">{formatPeso(t.totalAmount)}</div>
-                        <span className={`badge badge-[9px] md:badge-xs ${t.paymentMethod === 'cash' ? 'badge-success' : 'badge-warning'}`}>
-                          {t.paymentMethod === 'cash' ? 'Cash' : 'Utang'}
-                        </span>
+                        <span className="badge badge-[9px] md:badge-xs badge-success">Cash</span>
                       </div>
                     </div>
                   ))}
                 </div>
               )}
             </div>
-          </div>
-        )}
-
-        {activeTab === 'utang' && (
-          <div>
-            <h2 className="text-base md:text-xl font-bold mb-4"><span className="text-lg md:text-xl">📋</span> My Debts</h2>
-
-            <div className="grid grid-cols-3 gap-2 md:gap-3 mb-6">
-              <div className="bg-error/10 rounded-xl p-2 md:p-4 text-center">
-                <div className="text-[9px] md:text-xs opacity-60 mb-1">Remaining</div>
-                <div className="text-sm md:text-xl font-bold text-error">{formatPeso(totalUtang - totalBayad)}</div>
-              </div>
-              <div className="bg-warning/10 rounded-xl p-2 md:p-4 text-center">
-                <div className="text-[9px] md:text-xs opacity-60 mb-1">Total Debt</div>
-                <div className="text-sm md:text-xl font-bold text-warning">{formatPeso(totalUtang)}</div>
-              </div>
-              <div className="bg-success/10 rounded-xl p-2 md:p-4 text-center">
-                <div className="text-[9px] md:text-xs opacity-60 mb-1">Paid</div>
-                <div className="text-sm md:text-xl font-bold text-success">{formatPeso(totalBayad)}</div>
-              </div>
-            </div>
-
-            {pendingDebts.length > 0 && (
-              <div className="mb-6">
-                <h3 className="font-semibold mb-2 text-error text-sm md:text-base">❌ Unpaid / Partial ({pendingDebts.length})</h3>
-                <div className="space-y-3">
-                  {pendingDebts.map(d => (
-                    <div key={d._id} className="bg-base-100 rounded-xl shadow p-3 md:p-4">
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="max-w-[70%]">
-                          <div className="font-semibold text-xs md:text-base">
-                            {d.items.length > 0 ? d.items.map(i => `${i.productName} x${i.quantity}`).join(', ') : d.description}
-                          </div>
-                          <div className="text-[10px] md:text-xs opacity-60">{formatDate(d.createdAt)}</div>
-                        </div>
-                        <span className={`badge badge-xs md:badge-md ${d.status === 'partial' ? 'badge-warning' : 'badge-error'}`}>
-                          {d.status === 'partial' ? '⏳ Partial' : '❌ Pending'}
-                        </span>
-                      </div>
-                      <div className="flex gap-2 md:gap-4 text-[10px] md:text-sm">
-                        <div><span className="opacity-60">Debt:</span> <span className="font-bold">{formatPeso(d.totalAmount)}</span></div>
-                        <div><span className="opacity-60">Paid:</span> <span className="text-success">{formatPeso(d.paidAmount)}</span></div>
-                        <div><span className="opacity-60">Rem:</span> <span className="text-error font-bold">{formatPeso(d.remainingBalance)}</span></div>
-                      </div>
-
-                      {/* Items breakdown */}
-                      {d.items.length > 0 && (
-                        <div className="mt-2">
-                          <div className="text-xs opacity-60">Items:</div>
-                          {d.items.map((item, i) => (
-                            <div key={i} className="text-xs flex justify-between">
-                              <span>{item.productName} x{item.quantity}</span>
-                              <span>{formatPeso(item.subtotal)}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Payments made */}
-                      {d.payments?.length > 0 && (
-                        <div className="mt-2 border-t border-base-200 pt-2">
-                          <div className="text-xs opacity-60">Payments made:</div>
-                          {d.payments.map((p, i) => (
-                            <div key={i} className="text-xs flex justify-between text-success">
-                              <span>{formatDateTime(p.paidAt)}</span>
-                              <span>+{formatPeso(p.amount)}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {paidDebts.length > 0 && (
-              <div>
-                <h3 className="font-semibold mb-2 text-success">✅ Paid ({paidDebts.length})</h3>
-                <div className="space-y-2">
-                  {paidDebts.map(d => (
-                    <div key={d._id} className="bg-base-100 rounded-xl shadow p-3 opacity-70">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <div className="text-sm">
-                            {d.items.length > 0 ? d.items.map(i => i.productName).join(', ') : d.description}
-                          </div>
-                          <div className="text-xs opacity-60">{formatDate(d.createdAt)}</div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-bold text-success">{formatPeso(d.totalAmount)}</div>
-                          <span className="badge badge-success badge-sm">✅ Paid</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {myDebts.length === 0 && (
-              <div className="text-center py-12 opacity-60">
-                <span className="text-5xl">🎉</span>
-                <p className="mt-3 text-lg">No debts! Great job!</p>
-              </div>
-            )}
           </div>
         )}
 
@@ -378,9 +206,7 @@ const CustomerDashboard = () => {
                       </div>
                       <div className="text-right">
                         <div className="text-lg font-bold">{formatPeso(t.totalAmount)}</div>
-                        <span className={`badge badge-sm ${t.paymentMethod === 'cash' ? 'badge-success' : 'badge-warning'}`}>
-                          {t.paymentMethod === 'cash' ? '💵 Cash' : '📋 Utang'}
-                        </span>
+                        <span className="badge badge-sm badge-success">💵 Cash</span>
                       </div>
                     </div>
                     <div className="border-t border-base-200 pt-2">
