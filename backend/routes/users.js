@@ -99,6 +99,46 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
   }
 });
 
+// @route   GET /api/users/pending-staff
+// @desc    Get staff accounts pending approval
+// @access  Private (admin)
+router.get('/pending-staff', protect, authorize('admin'), async (req, res) => {
+  try {
+    const pending = await User.find({ role: 'staff', isApproved: false }).select('-password').sort({ createdAt: -1 });
+    res.json(pending);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @route   PUT /api/users/:id/approve
+// @desc    Approve a staff account
+// @access  Private (admin)
+router.put('/:id/approve', protect, authorize('admin'), async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(req.params.id, { isApproved: true }, { new: true }).select('-password');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    await ActivityLog.log(req.user._id, 'Inaprubahan ang staff account', `${user.firstName} ${user.lastName}`, 'user');
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @route   DELETE /api/users/:id/reject
+// @desc    Reject (delete) a pending staff account
+// @access  Private (admin)
+router.delete('/:id/reject', protect, authorize('admin'), async (req, res) => {
+  try {
+    const user = await User.findByIdAndDelete(req.params.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    await ActivityLog.log(req.user._id, 'Tinanggihan ang staff account', `${user.firstName} ${user.lastName}`, 'user');
+    res.json({ message: 'Account rejected and removed' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // @route   POST /api/users/create-staff
 // @desc    Create a staff account
 // @access  Private (admin)
@@ -115,6 +155,7 @@ router.post('/create-staff', protect, authorize('admin'), async (req, res) => {
       email,
       password,
       role: 'staff',
+      isApproved: true,
       phone: phone || ''
     });
 

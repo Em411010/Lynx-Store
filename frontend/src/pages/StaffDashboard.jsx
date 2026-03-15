@@ -234,10 +234,10 @@ const StaffDashboard = () => {
       <Toaster position="top-center" toastOptions={{ duration: 3000 }} />
       <div className="w-1/4 md:w-52 bg-base-100 shadow-xl flex flex-col min-h-screen">
         <div className="p-4 border-b border-base-300">
-          <h2 className="font-bold text-xs md:text-lg">🏪 Lynx Store</h2>
-          <p className="text-[10px] md:text-xs opacity-60">Staff Panel</p>
-          <p className="text-[8px] md:text-xs opacity-50 mt-0.5 tabular-nums">{now.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
-          <p className="text-[9px] md:text-sm font-mono font-semibold tabular-nums">{now.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</p>
+          <h2 className="font-bold text-sm md:text-xl">🏪 Lynx Store</h2>
+          <p className="text-[10px] md:text-sm opacity-60">Staff Panel</p>
+          <p className="text-[10px] md:text-sm opacity-50 mt-0.5 tabular-nums">{now.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+          <p className="text-xs md:text-base font-mono font-bold tabular-nums">{now.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</p>
         </div>
         <nav className="flex-1 p-1 md:p-2">
           {tabs.map(tab => (

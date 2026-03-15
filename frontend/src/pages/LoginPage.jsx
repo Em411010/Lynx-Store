@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import logo from '../assets/Fedora_Logo.png';
 import ThemeToggle from '../components/ThemeToggle';
@@ -11,6 +11,23 @@ const LoginPage = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [failCount, setFailCount] = useState(0);
+  const [cooldown, setCooldown] = useState(0);
+  const cooldownRef = useRef(null);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    cooldownRef.current = setInterval(() => {
+      setCooldown(prev => {
+        if (prev <= 1) {
+          clearInterval(cooldownRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(cooldownRef.current);
+  }, [cooldown > 0]);
 
   const { email, password } = formData;
 
@@ -29,6 +46,8 @@ const LoginPage = () => {
       setError('Please fill in all fields');
       return;
     }
+
+    if (cooldown > 0) return;
 
     setLoading(true);
 
@@ -59,7 +78,15 @@ const LoginPage = () => {
           navigate('/customer-dashboard');
         }
       } else {
-        setError(data.message || 'Login failed');
+        const newCount = failCount + 1;
+        setFailCount(newCount);
+        if (newCount >= 3) {
+          setFailCount(0);
+          setCooldown(5);
+          setError('Too many failed attempts. Please wait 5 seconds.');
+        } else {
+          setError(data.message || 'Login failed');
+        }
       }
     } catch (err) {
       setError('Unable to connect to server. Please try again.');
@@ -132,9 +159,9 @@ const LoginPage = () => {
               <button
                 type="submit"
                 className={`btn btn-primary ${loading ? 'loading' : ''}`}
-                disabled={loading}
+                disabled={loading || cooldown > 0}
               >
-                {loading ? 'Logging in...' : 'Login'}
+                {cooldown > 0 ? `Wait ${cooldown}s...` : loading ? 'Logging in...' : 'Login'}
               </button>
             </div>
           </form>

@@ -57,6 +57,7 @@ const AdminDashboard = () => {
 
   // Users state
   const [users, setUsers] = useState([]);
+  const [pendingStaff, setPendingStaff] = useState([]);
   const [userFilter, setUserFilter] = useState('');
   const [userSearch, setUserSearch] = useState('');
   const [showUserModal, setShowUserModal] = useState(false);
@@ -76,15 +77,6 @@ const AdminDashboard = () => {
   const [now, setNow] = useState(new Date());
   const [selectedActivity, setSelectedActivity] = useState(null);
   const [showActivityModal, setShowActivityModal] = useState(false);
-
-  // Feedback & Tickets state
-  const [feedbackList, setFeedbackList] = useState([]);
-  const [ticketList, setTicketList] = useState([]);
-  const [ticketStatusFilter, setTicketStatusFilter] = useState('');
-  const [selectedTicket, setSelectedTicket] = useState(null);
-  const [ticketResponse, setTicketResponse] = useState('');
-  const [ticketNewStatus, setTicketNewStatus] = useState('');
-  const [showTicketModal, setShowTicketModal] = useState(false);
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -184,6 +176,13 @@ const AdminDashboard = () => {
     } catch (e) { console.error(e); }
   }, [userFilter, userSearch]);
 
+  const loadPendingStaff = useCallback(async () => {
+    try {
+      const data = await api.get('/users/pending-staff');
+      setPendingStaff(data);
+    } catch (e) { console.error(e); }
+  }, []);
+
   const loadLowStockAlert = useCallback(async () => {
     try {
       const data = await api.get('/products?lowStock=true');
@@ -209,22 +208,6 @@ const AdminDashboard = () => {
     } catch (e) { console.error(e); }
   }, [activityFilter]);
 
-  const loadFeedback = useCallback(async () => {
-    try {
-      const data = await api.get('/feedback');
-      setFeedbackList(data);
-    } catch (e) { console.error(e); }
-  }, []);
-
-  const loadTickets = useCallback(async () => {
-    try {
-      let url = '/tickets?';
-      if (ticketStatusFilter) url += `status=${ticketStatusFilter}`;
-      const data = await api.get(url);
-      setTicketList(data);
-    } catch (e) { console.error(e); }
-  }, [ticketStatusFilter]);
-
   useEffect(() => {
     if (!user) return;
     loadLowStockAlert();
@@ -243,10 +226,9 @@ const AdminDashboard = () => {
     if (activeTab === 'categories') loadCategories();
     if (activeTab === 'sales') { loadTransactions(); loadSalesAnalytics(); loadStaffList(); loadCategories(); }
     if (activeTab === 'reports') loadReports();
-    if (activeTab === 'users') loadUsers();
+    if (activeTab === 'users') { loadUsers(); loadPendingStaff(); }
     if (activeTab === 'activity') loadActivity();
-    if (activeTab === 'feedback') { loadFeedback(); loadTickets(); }
-  }, [user, activeTab, loadDashboard, loadProducts, loadCategories, loadTransactions, loadSalesAnalytics, loadReports, loadUsers, loadActivity, loadFeedback, loadTickets, loadStaffList]);
+  }, [user, activeTab, loadDashboard, loadProducts, loadCategories, loadTransactions, loadSalesAnalytics, loadReports, loadUsers, loadPendingStaff, loadActivity, loadStaffList]);
 
   useEffect(() => {
     if (activeTab === 'sales') loadSalesAnalytics();
@@ -348,65 +330,25 @@ const AdminDashboard = () => {
     } catch (e) { showAlertMsg(e.message, 'error'); }
   };
 
-  // Feedback & Tickets
-  const markFeedbackRead = async (id) => {
-    try {
-      await api.put(`/feedback/${id}/mark-read`);
-      showAlertMsg('Feedback marked as read');
-      loadFeedback();
-    } catch (e) { showAlertMsg(e.message, 'error'); }
-  };
-
-  const deleteFeedback = async (id) => {
-    if (!confirm('Delete this feedback?')) return;
-    try {
-      await api.delete(`/feedback/${id}`);
-      showAlertMsg('Feedback deleted');
-      loadFeedback();
-    } catch (e) { showAlertMsg(e.message, 'error'); }
-  };
-
-  const openTicketModal = (ticket) => {
-    setSelectedTicket(ticket);
-    setTicketResponse(ticket.response || '');
-    setTicketNewStatus(ticket.status);
-    setShowTicketModal(true);
-  };
-
-  const saveTicketResponse = async () => {
-    if (!ticketResponse.trim()) {
-      alert('Please enter a response');
-      return;
-    }
-    try {
-      await api.put(`/tickets/${selectedTicket._id}/respond`, {
-        response: ticketResponse,
-        status: ticketNewStatus
-      });
-      showAlertMsg('Response saved!');
-      setShowTicketModal(false);
-      loadTickets();
-    } catch (e) { showAlertMsg(e.message, 'error'); }
-  };
-
-  const updateTicketStatus = async (id, status) => {
-    try {
-      await api.put(`/tickets/${id}/status`, { status });
-      showAlertMsg('Ticket status updated');
-      loadTickets();
-    } catch (e) { showAlertMsg(e.message, 'error'); }
-  };
-
-  const deleteTicket = async (id) => {
-    if (!confirm('Delete this ticket?')) return;
-    try {
-      await api.delete(`/tickets/${id}`);
-      showAlertMsg('Ticket deleted');
-      loadTickets();
-    } catch (e) { showAlertMsg(e.message, 'error'); }
-  };
-
   // Users
+  const approveStaff = async (id) => {
+    try {
+      await api.put(`/users/${id}/approve`);
+      showAlertMsg('Staff account approved!');
+      loadPendingStaff();
+      loadUsers();
+    } catch (e) { showAlertMsg(e.message, 'error'); }
+  };
+
+  const rejectStaff = async (id) => {
+    if (!confirm('Reject and delete this staff account?')) return;
+    try {
+      await api.delete(`/users/${id}/reject`);
+      showAlertMsg('Account rejected.');
+      loadPendingStaff();
+    } catch (e) { showAlertMsg(e.message, 'error'); }
+  };
+
   const createStaff = async () => {
     try {
       await api.post('/users/create-staff', userForm);
@@ -436,7 +378,6 @@ const AdminDashboard = () => {
     { key: 'reports', label: '📈 Reports' },
     { key: 'users', label: '👥 Users' },
     { key: 'activity', label: '📝 Activity' },
-    { key: 'feedback', label: '💬 Feedback' },
   ];
 
   return (
@@ -444,10 +385,10 @@ const AdminDashboard = () => {
       <Toaster position="top-right" toastOptions={{ duration: 3500 }} />
       <div className="w-1/4 md:w-56 bg-base-100 shadow-xl flex flex-col min-h-screen print:hidden overflow-hidden">
         <div className="p-2 md:p-4 border-b border-base-300">
-          <h2 className="font-bold text-[10px] md:text-lg truncate">🏪 Lynx Store</h2>
-          <p className="text-[9px] md:text-xs opacity-60">Admin Panel</p>
-          <p className="text-[8px] md:text-xs opacity-50 mt-0.5 tabular-nums">{now.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
-          <p className="text-[9px] md:text-sm font-mono font-semibold tabular-nums">{now.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</p>
+          <h2 className="font-bold text-sm md:text-xl truncate">🏪 Lynx Store</h2>
+          <p className="text-[10px] md:text-sm opacity-60">Admin Panel</p>
+          <p className="text-[10px] md:text-sm opacity-50 mt-0.5 tabular-nums">{now.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+          <p className="text-xs md:text-base font-mono font-bold tabular-nums">{now.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</p>
         </div>
         <nav className="flex-1 p-1 md:p-2">
           {tabs.map(tab => (
@@ -1393,6 +1334,27 @@ const AdminDashboard = () => {
 
         {activeTab === 'users' && (
           <div>
+            {/* Pending Approvals */}
+            {pendingStaff.length > 0 && (
+              <div className="alert alert-warning mb-6 flex flex-col items-start gap-3">
+                <div className="font-bold text-base">⏳ Pending Staff Approvals ({pendingStaff.length})</div>
+                <div className="w-full space-y-2">
+                  {pendingStaff.map(u => (
+                    <div key={u._id} className="flex items-center justify-between bg-base-100 rounded-lg px-4 py-2">
+                      <div>
+                        <div className="font-semibold">{u.firstName} {u.lastName}</div>
+                        <div className="text-xs opacity-60">{u.email} · {formatDate(u.createdAt)}</div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={() => approveStaff(u._id)} className="btn btn-success btn-xs">✓ Approve</button>
+                        <button onClick={() => rejectStaff(u._id)} className="btn btn-error btn-xs">✕ Reject</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-between items-center mb-4">
               <h1 className="text-2xl font-bold">👥 Users</h1>
               <button onClick={() => setShowUserModal(true)} className="btn btn-primary btn-sm">+ Add Staff</button>
@@ -1402,10 +1364,10 @@ const AdminDashboard = () => {
                 onChange={e => setUserSearch(e.target.value)} className="input input-bordered input-sm w-64" />
             </div>
             <div className="flex gap-2 mb-4">
-              {['', 'admin', 'staff', 'customer'].map(r => (
+              {['', 'admin', 'staff'].map(r => (
                 <button key={r} onClick={() => setUserFilter(r)}
                   className={`btn btn-sm ${userFilter === r ? 'btn-primary' : 'btn-ghost'}`}>
-                  {r === '' ? 'All' : r === 'admin' ? 'Admin' : r === 'staff' ? 'Staff' : 'Customer'}
+                  {r === '' ? 'All' : r === 'admin' ? 'Admin' : 'Staff'}
                 </button>
               ))}
             </div>
@@ -1420,14 +1382,21 @@ const AdminDashboard = () => {
                       <td className="font-semibold">{u.firstName} {u.lastName}</td>
                       <td className="text-xs">{u.email}</td>
                       <td>
-                        <span className={`badge badge-sm ${u.role === 'admin' ? 'badge-error' : u.role === 'staff' ? 'badge-info' : 'badge-success'}`}>
+                        <span className={`badge badge-sm ${u.role === 'admin' ? 'badge-error' : 'badge-info'}`}>
                           {u.role}
                         </span>
+                        {u.role === 'staff' && !u.isApproved && <span className="badge badge-warning badge-sm ml-1">pending</span>}
                       </td>
                       <td>{u.phone || '-'}</td>
                       <td className="text-xs">{formatDate(u.createdAt)}</td>
                       <td>
                         <div className="flex gap-1">
+                          {u.role === 'staff' && !u.isApproved && (
+                            <>
+                              <button onClick={() => approveStaff(u._id)} className="btn btn-xs btn-success" title="Approve">✓ Approve</button>
+                              <button onClick={() => rejectStaff(u._id)} className="btn btn-xs btn-error" title="Reject">✕ Reject</button>
+                            </>
+                          )}
                           {u._id !== user._id && (
                             <button onClick={() => deleteUser(u._id)} className="btn btn-xs btn-ghost text-error" title="Delete User">🗑️</button>
                           )}
@@ -1475,142 +1444,6 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {activeTab === 'feedback' && (
-          <div>
-            <h1 className="text-2xl font-bold mb-6">💬 Customer Feedback & Support</h1>
-
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              <div>
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-bold">⭐ Customer Feedback</h2>
-                  <div className="badge badge-lg">{feedbackList.length} total</div>
-                </div>
-
-                {feedbackList.length === 0 ? (
-                  <div className="bg-base-100 rounded-xl shadow p-8 text-center opacity-60">
-                    <span className="text-5xl">📝</span>
-                    <p className="mt-3">No feedback yet</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3 max-h-[700px] overflow-y-auto">
-                    {feedbackList.map(f => (
-                      <div key={f._id} className={`bg-base-100 rounded-xl shadow p-4 border-2 ${f.isRead ? 'border-transparent' : 'border-warning'}`}>
-                        <div className="flex justify-between items-start mb-2">
-                          <div>
-                            <div className="font-semibold">{f.customer?.firstName} {f.customer?.lastName}</div>
-                            <div className="text-xs opacity-60">{f.customer?.email}</div>
-                          </div>
-                          {!f.isRead && <span className="badge badge-warning">New</span>}
-                        </div>
-
-                        <div className="flex gap-1 mb-2">
-                          {[...Array(5)].map((_, i) => (
-                            <span key={i} className={`text-lg ${i < f.rating ? 'text-warning' : 'text-base-300'}`}>⭐</span>
-                          ))}
-                          <span className="ml-2 text-sm font-semibold">{f.rating}/5</span>
-                        </div>
-
-                        <p className="text-sm mb-3">{f.comment}</p>
-
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs opacity-60">{formatDateTime(f.createdAt)}</span>
-                          <div className="flex gap-2">
-                            {!f.isRead && (
-                              <button onClick={() => markFeedbackRead(f._id)} className="btn btn-xs btn-success">
-                                ✓ Mark Read
-                              </button>
-                            )}
-                            <button onClick={() => deleteFeedback(f._id)} className="btn btn-xs btn-ghost text-error">
-                              🗑️ Delete
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-bold">🎫 Support Tickets</h2>
-                  <div className="flex gap-2">
-                    {['', 'open', 'in-progress', 'resolved', 'closed'].map(s => (
-                      <button key={s} onClick={() => setTicketStatusFilter(s)}
-                        className={`btn btn-xs ${ticketStatusFilter === s ? 'btn-primary' : 'btn-ghost'}`}>
-                        {s === '' ? 'All' : s}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {ticketList.length === 0 ? (
-                  <div className="bg-base-100 rounded-xl shadow p-8 text-center opacity-60">
-                    <span className="text-5xl">🎫</span>
-                    <p className="mt-3">No tickets yet</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3 max-h-[700px] overflow-y-auto">
-                    {ticketList.map(t => (
-                      <div key={t._id} className="bg-base-100 rounded-xl shadow p-4">
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="flex-1">
-                            <div className="font-semibold">{t.subject}</div>
-                            <div className="text-xs opacity-60">
-                              {t.customer?.firstName} {t.customer?.lastName} • {t.customer?.email}
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <span className={`badge badge-sm ${
-                              t.priority === 'high' ? 'badge-error' :
-                              t.priority === 'medium' ? 'badge-warning' : 'badge-info'
-                            }`}>{t.priority}</span>
-                            <span className={`badge badge-sm ${
-                              t.status === 'resolved' || t.status === 'closed' ? 'badge-success' :
-                              t.status === 'in-progress' ? 'badge-warning' : 'badge-ghost'
-                            }`}>{t.status}</span>
-                          </div>
-                        </div>
-
-                        <p className="text-sm mb-2">{t.description}</p>
-
-                        {t.response && (
-                          <div className="bg-success/10 rounded-lg p-2 mb-2 border-l-4 border-success">
-                            <p className="text-xs font-semibold text-success mb-1">
-                              Response by {t.respondedBy?.firstName}:
-                            </p>
-                            <p className="text-xs">{t.response}</p>
-                          </div>
-                        )}
-
-                        <div className="flex justify-between items-center mt-3 pt-2 border-t border-base-200">
-                          <span className="text-xs opacity-60">{formatDateTime(t.createdAt)}</span>
-                          <div className="flex gap-2">
-                            <button onClick={() => openTicketModal(t)} className="btn btn-xs btn-primary">
-                              {t.response ? '✏️ Edit' : '💬 Respond'}
-                            </button>
-                            {t.status !== 'closed' && (
-                              <select value={t.status} onChange={(e) => updateTicketStatus(t._id, e.target.value)}
-                                className="select select-xs select-bordered">
-                                <option value="open">Open</option>
-                                <option value="in-progress">In Progress</option>
-                                <option value="resolved">Resolved</option>
-                                <option value="closed">Closed</option>
-                              </select>
-                            )}
-                            <button onClick={() => deleteTicket(t._id)} className="btn btn-xs btn-ghost text-error">
-                              🗑️
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {showProductModal && (
@@ -1800,56 +1633,6 @@ const AdminDashboard = () => {
             <div className="modal-action">
               <button onClick={() => setShowUserModal(false)} className="btn btn-ghost">Cancel</button>
               <button onClick={createStaff} className="btn btn-primary">Create Account</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showTicketModal && selectedTicket && (
-        <div className="modal modal-open">
-          <div className="modal-box max-w-2xl">
-            <h3 className="font-bold text-lg mb-4">💬 Respond to Ticket</h3>
-            
-            <div className="bg-base-200 rounded-lg p-4 mb-4">
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <div className="font-semibold">{selectedTicket.subject}</div>
-                  <div className="text-xs opacity-60">
-                    From: {selectedTicket.customer?.firstName} {selectedTicket.customer?.lastName}
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <span className={`badge ${
-                    selectedTicket.priority === 'high' ? 'badge-error' :
-                    selectedTicket.priority === 'medium' ? 'badge-warning' : 'badge-info'
-                  }`}>{selectedTicket.priority}</span>
-                </div>
-              </div>
-              <p className="text-sm">{selectedTicket.description}</p>
-              <p className="text-xs opacity-60 mt-2">{formatDateTime(selectedTicket.createdAt)}</p>
-            </div>
-
-            <div className="form-control mb-3">
-              <label className="label"><span className="label-text font-semibold">Your Response</span></label>
-              <textarea value={ticketResponse} onChange={e => setTicketResponse(e.target.value)}
-                className="textarea textarea-bordered h-32" 
-                placeholder="Type your response to the customer..."></textarea>
-            </div>
-
-            <div className="form-control mb-3">
-              <label className="label"><span className="label-text font-semibold">Update Status</span></label>
-              <select value={ticketNewStatus} onChange={e => setTicketNewStatus(e.target.value)}
-                className="select select-bordered">
-                <option value="open">Open</option>
-                <option value="in-progress">In Progress</option>
-                <option value="resolved">Resolved</option>
-                <option value="closed">Closed</option>
-              </select>
-            </div>
-
-            <div className="modal-action">
-              <button onClick={() => setShowTicketModal(false)} className="btn btn-ghost">Cancel</button>
-              <button onClick={saveTicketResponse} className="btn btn-primary">💾 Save Response</button>
             </div>
           </div>
         </div>

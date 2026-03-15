@@ -31,6 +31,10 @@ const userSchema = new mongoose.Schema({
     enum: ['admin', 'staff', 'customer'],
     default: 'customer'
   },
+  isApproved: {
+    type: Boolean,
+    default: false
+  },
   phone: {
     type: String,
     trim: true,

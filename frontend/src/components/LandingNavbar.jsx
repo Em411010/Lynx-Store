@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import logo from '../assets/Fedora_Logo.png';
@@ -6,6 +6,12 @@ import ThemeToggle from './ThemeToggle';
 
 const LandingNavbar = () => {
   const [open, setOpen] = useState(false);
+  const [now, setNow] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   return (
     <div className="navbar relative bg-base-100 shadow-lg px-4 lg:px-8">
@@ -28,8 +34,15 @@ const LandingNavbar = () => {
         </button>
 
         {/* Desktop actions */}
-        <div className="hidden lg:flex items-center gap-2">
+        <div className="hidden lg:flex items-center gap-3">
+          <div className="text-right tabular-nums leading-tight">
+            <div className="text-xs opacity-60">{now.toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</div>
+            <div className="text-sm font-mono font-bold">{now.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
+          </div>
           <ThemeToggle />
+          <Link to="/register">
+            <button className="btn btn-ghost btn-sm">Staff Register</button>
+          </Link>
           <Link to="/login">
             <button className="btn btn-primary">Login</button>
           </Link>
@@ -44,6 +57,9 @@ const LandingNavbar = () => {
             <span className="text-sm font-medium">Toggle Theme</span>
           </div>
 
+          <Link to="/register" onClick={() => setOpen(false)} className="w-full">
+            <button className="btn btn-ghost w-full justify-end">Staff Register</button>
+          </Link>
           <Link to="/login" onClick={() => setOpen(false)} className="w-full">
             <button className="btn btn-primary w-full justify-end">Login</button>
           </Link>

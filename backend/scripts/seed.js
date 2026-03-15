@@ -116,19 +116,6 @@ const products = {
   ]
 };
 
-const customers = [
-  { firstName: 'Maria', lastName: 'Santos', email: 'maria.santos@email.com', phone: '09171234567', address: '123 Mabini St., Brgy. 1' },
-  { firstName: 'Juan', lastName: 'Dela Cruz', email: 'juan.delacruz@email.com', phone: '09281234567', address: '456 Rizal Ave., Brgy. 2' },
-  { firstName: 'Ana', lastName: 'Reyes', email: 'ana.reyes@email.com', phone: '09391234567', address: '789 Luna St., Brgy. 3' },
-  { firstName: 'Pedro', lastName: 'Garcia', email: 'pedro.garcia@email.com', phone: '09451234567', address: '321 Bonifacio Rd., Brgy. 4' },
-  { firstName: 'Rosa', lastName: 'Hernandez', email: 'rosa.hernandez@email.com', phone: '09561234567', address: '654 Aguinaldo St., Brgy. 5' },
-  { firstName: 'Jose', lastName: 'Martinez', email: 'jose.martinez@email.com', phone: '09671234567', address: '987 Quezon Ave., Brgy. 6' },
-  { firstName: 'Carmen', lastName: 'Lopez', email: 'carmen.lopez@email.com', phone: '09781234567', address: '147 Magsaysay Blvd., Brgy. 7' },
-  { firstName: 'Miguel', lastName: 'Gonzales', email: 'miguel.gonzales@email.com', phone: '09891234567', address: '258 Roxas St., Brgy. 8' },
-  { firstName: 'Elena', lastName: 'Ramos', email: 'elena.ramos@email.com', phone: '09121234567', address: '369 Osmeña Ave., Brgy. 9' },
-  { firstName: 'Ricardo', lastName: 'Torres', email: 'ricardo.torres@email.com', phone: '09231234567', address: '741 Laurel Rd., Brgy. 10' }
-];
-
 const staff = [
   { firstName: 'Linda', lastName: 'Cruz', email: 'linda.cruz@lynxstore.com', phone: '09181234567', address: '111 Staff Housing, Brgy. 1', role: 'staff' },
   { firstName: 'Carlos', lastName: 'Bautista', email: 'carlos.bautista@lynxstore.com', phone: '09291234567', address: '222 Staff Housing, Brgy. 1', role: 'staff' }
@@ -158,7 +145,7 @@ const clearDatabase = async () => {
 // Seed users
 const seedUsers = async () => {
   console.log('👥 Seeding users...');
-  
+
   // Create admin (password will be hashed by User model's pre-save hook)
   const admin = await User.create({
     firstName: 'Admin',
@@ -166,35 +153,25 @@ const seedUsers = async () => {
     email: 'admin@lynxstore.com',
     password: 'admin123',
     role: 'admin',
+    isApproved: true,
     phone: '09991234567',
     address: 'Main Office'
   });
   console.log('  ✓ Created admin user');
 
-  // Create staff
+  // Create staff (pre-approved since they are seeded directly)
   const staffUsers = [];
   for (const staffData of staff) {
     const staffUser = await User.create({
       ...staffData,
-      password: 'admin123'
+      password: 'admin123',
+      isApproved: true
     });
     staffUsers.push(staffUser);
   }
   console.log(`  ✓ Created ${staffUsers.length} staff users`);
 
-  // Create customers
-  const customerUsers = [];
-  for (const customerData of customers) {
-    const customer = await User.create({
-      ...customerData,
-      password: 'admin123',
-      role: 'customer'
-    });
-    customerUsers.push(customer);
-  }
-  console.log(`  ✓ Created ${customerUsers.length} customer users`);
-
-  return { admin, staffUsers, customerUsers };
+  return { admin, staffUsers };
 };
 
 // Seed categories and products
@@ -224,76 +201,66 @@ const seedCategoriesAndProducts = async () => {
   return { categories: createdCategories, products: allProducts };
 };
 
+// Walk-in customer name pool for realistic seeded transactions
+const walkInNames = [
+  'Walk-in', 'Walk-in', 'Walk-in',
+  'Maria S.', 'Juan D.', 'Ana R.', 'Pedro G.', 'Rosa H.',
+  'Jose M.', 'Carmen L.', 'Miguel G.', 'Elena R.', 'Ricardo T.'
+];
+
 // Generate historical transactions
-const generateTransactions = async (customerUsers, staffUsers, allProducts) => {
+const generateTransactions = async (staffUsers, allProducts) => {
   console.log('💰 Generating historical transactions...');
-  
+
   const transactions = [];
-  const sixMonthsAgo = new Date();
-  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-  
   let receiptCounter = 1;
-  
-  // Generate 5-15 transactions per customer over 6 months
-  for (const customer of customerUsers) {
-    const numTransactions = Math.floor(Math.random() * 11) + 5; // 5-15 transactions
-    
-    for (let i = 0; i < numTransactions; i++) {
-      const transactionDate = randomDateWithinMonths(6);
-      const staff = staffUsers[Math.floor(Math.random() * staffUsers.length)];
-      
-      // Random 2-6 items per transaction
-      const numItems = Math.floor(Math.random() * 5) + 2;
-      const items = [];
-      let totalAmount = 0;
-      
-      for (let j = 0; j < numItems; j++) {
-        const product = allProducts[Math.floor(Math.random() * allProducts.length)];
-        const isTingi = Math.random() > 0.5;
-        const quantity = Math.floor(Math.random() * 5) + 1;
-        const unitPrice = isTingi ? product.tingiPrice : product.unitPrice;
-        const subtotal = quantity * unitPrice;
-        
-        items.push({
-          product: product._id,
-          productName: product.name,
-          quantity,
-          unitPrice,
-          subtotal,
-          isTingi
-        });
-        
-        totalAmount += subtotal;
-      }
-      
-      // All transactions are cash
-      let paymentMethod = 'cash';
-      let cashReceived = Math.ceil(totalAmount / 100) * 100; // Round up to nearest 100
-      let changeAmount = cashReceived - totalAmount;
-      
-      // Generate unique receipt number based on transaction date
-      const dateStr = transactionDate.toISOString().slice(0,10).replace(/-/g, '');
-      const receiptNumber = `RCT-${dateStr}-${String(receiptCounter++).padStart(4, '0')}`;
-      
-      const transaction = await Transaction.create({
-        receiptNumber,
-        customer: customer._id,
-        customerName: `${customer.firstName} ${customer.lastName}`,
-        staff: staff._id,
-        items,
-        totalAmount,
-        paymentMethod,
-        cashReceived,
-        changeAmount,
-        createdAt: transactionDate,
-        updatedAt: transactionDate
-      });
-      
-      transactions.push(transaction);
+
+  const makeTransaction = async (transactionDate) => {
+    const staffMember = staffUsers[Math.floor(Math.random() * staffUsers.length)];
+    const customerName = walkInNames[Math.floor(Math.random() * walkInNames.length)];
+    const numItems = Math.floor(Math.random() * 5) + 2;
+    const items = [];
+    let totalAmount = 0;
+
+    for (let j = 0; j < numItems; j++) {
+      const product = allProducts[Math.floor(Math.random() * allProducts.length)];
+      const isTingi = Math.random() > 0.5;
+      const quantity = Math.floor(Math.random() * 5) + 1;
+      const unitPrice = isTingi ? product.tingiPrice : product.unitPrice;
+      const subtotal = quantity * unitPrice;
+      items.push({ product: product._id, productName: product.name, quantity, unitPrice, subtotal, isTingi });
+      totalAmount += subtotal;
     }
+
+    const cashReceived = Math.ceil(totalAmount / 100) * 100;
+    const changeAmount = cashReceived - totalAmount;
+    const dateStr = transactionDate.toISOString().slice(0, 10).replace(/-/g, '');
+    const receiptNumber = `RCT-${dateStr}-${String(receiptCounter++).padStart(4, '0')}`;
+
+    const transaction = await Transaction.create({
+      receiptNumber, customer: null, customerName,
+      staff: staffMember._id, items, totalAmount,
+      paymentMethod: 'cash', cashReceived, changeAmount,
+      createdAt: transactionDate, updatedAt: transactionDate
+    });
+    transactions.push(transaction);
+  };
+
+  // ~80 historical transactions spread over the past 6 months
+  for (let i = 0; i < 80; i++) {
+    await makeTransaction(randomDateWithinMonths(6));
   }
-  
-  console.log(`  ✓ Created ${transactions.length} transactions`);
+
+  // 15 transactions for today so the Sales tab has data immediately
+  const todayBase = new Date();
+  todayBase.setHours(7, 0, 0, 0);
+  for (let i = 0; i < 15; i++) {
+    const t = new Date(todayBase);
+    t.setMinutes(t.getMinutes() + i * 45); // spread ~45 min apart
+    await makeTransaction(t);
+  }
+
+  console.log(`  ✓ Created ${transactions.length} transactions (80 historical + 15 today)`);
   return transactions;
 };
 
@@ -304,28 +271,27 @@ const seedDatabase = async () => {
     
     await connectDB();
     await clearDatabase();
-    
+
     console.log('');
-    const { admin, staffUsers, customerUsers } = await seedUsers();
-    
+    const { admin, staffUsers } = await seedUsers();
+
     console.log('');
     const { categories: createdCategories, products: allProducts } = await seedCategoriesAndProducts();
-    
+
     console.log('');
-    await generateTransactions(customerUsers, staffUsers, allProducts);
-    
+    await generateTransactions(staffUsers, allProducts);
+
     console.log('\n✨ Database seeding completed successfully!\n');
     console.log('📊 Summary:');
     console.log(`   • Admin: 1`);
     console.log(`   • Staff: ${staffUsers.length}`);
-    console.log(`   • Customers: ${customerUsers.length}`);
     console.log(`   • Categories: ${createdCategories.length}`);
     console.log(`   • Products: ${allProducts.length}`);
+    console.log(`   • Transactions: 95 (80 historical + 15 today)`);
     console.log('\n🔐 Login credentials:');
     console.log('   Admin: admin@lynxstore.com / admin123');
     console.log('   Staff: linda.cruz@lynxstore.com / admin123');
     console.log('   Staff: carlos.bautista@lynxstore.com / admin123');
-    console.log('   Customer: maria.santos@email.com / admin123');
     console.log('   (All users have password: admin123)\n');
     
     process.exit(0);

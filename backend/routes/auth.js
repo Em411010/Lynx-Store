@@ -12,39 +12,27 @@ const generateToken = (id) => {
 };
 
 // @route   POST /api/auth/register
-// @desc    Register a new user
+// @desc    Register a new staff account (pending admin approval)
 // @access  Public
 router.post('/register', async (req, res) => {
   try {
     const { firstName, lastName, email, password } = req.body;
 
-    // Check if user exists
     const userExists = await User.findOne({ email });
-
     if (userExists) {
-      return res.status(400).json({ message: 'User already exists' });
+      return res.status(400).json({ message: 'Email already in use' });
     }
 
-    // Create user (role defaults to 'customer')
     const user = await User.create({
       firstName,
       lastName,
       email,
-      password
+      password,
+      role: 'staff',
+      isApproved: false
     });
 
-    if (user) {
-      res.status(201).json({
-        _id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        role: user.role,
-        token: generateToken(user._id)
-      });
-    } else {
-      res.status(400).json({ message: 'Invalid user data' });
-    }
+    res.status(201).json({ message: 'Account created. Please wait for admin approval before logging in.' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -61,6 +49,10 @@ router.post('/login', async (req, res) => {
     const user = await User.findOne({ email }).select('+password');
 
     if (user && (await user.matchPassword(password))) {
+      // Block unapproved staff
+      if (user.role === 'staff' && !user.isApproved) {
+        return res.status(403).json({ message: 'Your account is pending admin approval. Please wait.' });
+      }
       res.json({
         _id: user._id,
         firstName: user.firstName,
