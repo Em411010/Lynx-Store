@@ -31,10 +31,7 @@ const LandingNavbar = () => {
         <div className="hidden lg:flex items-center gap-2">
           <ThemeToggle />
           <Link to="/login">
-            <button className="btn btn-ghost">Login</button>
-          </Link>
-          <Link to="/register">
-            <button className="btn btn-primary">Create Account</button>
+            <button className="btn btn-primary">Login</button>
           </Link>
         </div>
       </div>
@@ -48,11 +45,7 @@ const LandingNavbar = () => {
           </div>
 
           <Link to="/login" onClick={() => setOpen(false)} className="w-full">
-            <button className="btn btn-ghost w-full justify-end">Login</button>
-          </Link>
-
-          <Link to="/register" onClick={() => setOpen(false)} className="w-full">
-            <button className="btn btn-primary w-full justify-end">Create Account</button>
+            <button className="btn btn-primary w-full justify-end">Login</button>
           </Link>
         </div>
       )}

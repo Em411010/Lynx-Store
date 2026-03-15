@@ -47,6 +47,30 @@ router.get('/', protect, async (req, res) => {
   }
 });
 
+// @route   GET /api/products/public
+// @desc    Get all active products for public browsing (no auth required)
+// @access  Public
+router.get('/public', async (req, res) => {
+  try {
+    const { category, search } = req.query;
+    let query = { isActive: true };
+    if (category) query.category = category;
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { brand: { $regex: search, $options: 'i' } }
+      ];
+    }
+    const products = await Product.find(query)
+      .select('name brand category unitPrice tingiPrice tingiUnit stock reorderLevel')
+      .populate('category', 'name icon')
+      .sort({ name: 1 });
+    res.json(products);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // @route   GET /api/products/:id
 // @desc    Get single product
 // @access  Private

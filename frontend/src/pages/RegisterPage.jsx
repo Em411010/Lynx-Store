@@ -92,9 +92,14 @@ const RegisterPage = () => {
       <div className="card w-full max-w-md bg-base-100 shadow-xl">
         <div className="card-body">
           <div className="flex flex-col items-center mb-6">
-            <img src={logo} alt="Logo" className="w-20 h-20 rounded-full mb-4" />
+            <img src={logo} alt="Logo" className="w-20 h-20 rounded-full mb-3" />
+            <p className="text-lg font-bold text-center leading-tight">
+              Lynx's Sari-Sari Store<br />
+              <span className="text-sm font-semibold opacity-70">POS and Sales System</span>
+            </p>
+            <div className="divider my-2"></div>
             <h2 className="card-title text-2xl">Create Account</h2>
-            <p className="text-sm opacity-70">Join Lynx's Sari-sari Store</p>
+            <p className="text-sm opacity-70">Register a new account</p>
           </div>
 
           {error && (
