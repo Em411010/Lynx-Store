@@ -62,7 +62,7 @@ router.get('/public', async (req, res) => {
       ];
     }
     const products = await Product.find(query)
-      .select('name brand category unitPrice tingiPrice tingiUnit stock reorderLevel')
+      .select('name brand category unitPrice tingiPrice tingiUnit tingiPerPack stock reorderLevel')
       .populate('category', 'name icon')
       .sort({ name: 1 });
     res.json(products);

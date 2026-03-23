@@ -35,6 +35,7 @@ const SplashScreen = ({ onFinish }) => {
             <li>Esona, Madel P.</li>
             <li>Lancero, Maica Pearl F.</li>
             <li>Africano, Michael P.</li>
+            <li>Mendoza, Charles Joshua B.</li>
           </ul>
         </div>
       </div>

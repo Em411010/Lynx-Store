@@ -302,9 +302,16 @@ const StaffDashboard = () => {
                             <div className="text-[8px] md:text-xs text-secondary">Tingi: {formatPeso(p.tingiPrice)}/{p.tingiUnit}</div>
                           )}
                         </div>
-                        <span className={`badge badge-[9px] md:badge-xs ${p.isLowStock ? 'badge-warning' : 'badge-ghost'}`}>
-                          {Math.floor(p.stock)}
-                        </span>
+                        <div className="text-right">
+                          <div className={`text-[8px] md:text-xs font-semibold ${p.isLowStock ? 'text-warning' : 'text-success'}`}>
+                            {Math.floor(p.stock)} pack{Math.floor(p.stock) !== 1 ? 's' : ''}
+                          </div>
+                          {p.tingiPerPack > 1 && (
+                            <div className="text-[8px] md:text-xs opacity-60">
+                              {Math.floor(p.stock * p.tingiPerPack)} pcs
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <div className="flex gap-1 mt-2">
                         <button onClick={() => addToCart(p)} className="btn btn-[8px] md:btn-xs btn-primary flex-1 h-auto py-1 min-h-0">

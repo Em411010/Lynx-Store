@@ -124,9 +124,17 @@ const LandingPage = () => {
                       <div className="flex flex-col items-center gap-1 mt-2">
                         <span className="text-primary font-bold">₱{p.unitPrice.toFixed(2)}</span>
                         {p.tingiPrice > 0 && (
-                          <span className="text-xs opacity-60">₱{p.tingiPrice.toFixed(2)}/{p.tingiUnit}</span>
+                          <span className="text-xs opacity-60">₱{p.tingiPrice.toFixed(2)}/pcs</span>
                         )}
                         <span className={`badge ${cls} badge-sm mt-1`}>{label}</span>
+                        {p.stock > 0 && (
+                          <div className="text-xs opacity-70 text-center leading-tight mt-1">
+                            <div>{Math.floor(p.stock)} pack{Math.floor(p.stock) !== 1 ? 's' : ''}</div>
+                            {p.tingiPerPack > 1 && (
+                              <div>{Math.floor(p.stock * p.tingiPerPack)} pcs</div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
