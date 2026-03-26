@@ -69,7 +69,7 @@ const RegisterPage = () => {
             <img src={logo} alt="Logo" className="w-20 h-20 rounded-full mb-3" />
             <p className="text-lg font-bold text-center leading-tight">
               Lynx's Sari-Sari Store<br />
-              <span className="text-sm font-semibold opacity-70">POS and Sales System</span>
+              <span className="text-sm font-semibold opacity-70">POS and Inventory System</span>
             </p>
             <div className="divider my-2"></div>
             <h2 className="card-title text-2xl">Staff Registration</h2>

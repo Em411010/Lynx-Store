@@ -56,10 +56,10 @@ const LandingPage = () => {
             <div className="max-w-2xl">
               <img
                 src={logo}
-                alt="Lynx's Sari-Sari Store POS and Sales System"
+                alt="Lynx's Sari-Sari Store POS and Inventory System"
                 className="w-48 h-48 mx-auto mb-8 rounded-full shadow-2xl"
               />
-              <h1 className="text-5xl font-bold mb-4">Lynx's Sari-Sari Store<br /><span className="text-3xl font-semibold">POS and Sales System</span></h1>
+              <h1 className="text-5xl font-bold mb-4">Lynx's Sari-Sari Store<br /><span className="text-3xl font-semibold">POS and Inventory System</span></h1>
               <p className="text-2xl mb-2">Fast. Simple. Reliable.</p>
               <p className="text-lg mb-8 opacity-80">
                 Manage sales, inventory, and reports — all in one place
@@ -150,7 +150,7 @@ const LandingPage = () => {
         {/* Footer */}
         <footer className="footer footer-center p-10 bg-base-100 text-base-content">
           <div>
-            <p className="font-bold text-lg">Lynx's Sari-Sari Store POS and Sales System</p>
+            <p className="font-bold text-lg">Lynx's Sari-Sari Store POS and Inventory System</p>
             <p>© 2026 Lynx's Sari-Sari Store. All rights reserved.</p>
           </div>
         </footer>

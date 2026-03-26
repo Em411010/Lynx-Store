@@ -17,8 +17,8 @@ const LandingNavbar = () => {
     <div className="navbar relative bg-base-100 shadow-lg px-4 lg:px-8">
       <div className="flex-1">
         <Link to="/" className="flex items-center gap-3">
-          <img src={logo} alt="Lynx's Sari-Sari Store POS and Sales System" className="h-12 w-12 rounded-full" />
-          <span className="font-bold leading-tight"><span className="text-xl">Lynx's Sari-Sari Store</span><br /><span className="text-sm font-medium opacity-70">POS and Sales System</span></span>
+          <img src={logo} alt="Lynx's Sari-Sari Store POS and Inventory System" className="h-12 w-12 rounded-full" />
+          <span className="font-bold leading-tight"><span className="text-xl">Lynx's Sari-Sari Store</span><br /><span className="text-sm font-medium opacity-70">POS and Inventory System</span></span>
         </Link>
       </div>
 
