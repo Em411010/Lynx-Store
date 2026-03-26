@@ -10,6 +10,71 @@ const LandingPage = () => {
   const [activeCategory, setActiveCategory] = useState('');
   const [loading, setLoading] = useState(true);
   const productsRef = useRef(null);
+  const orb1Ref = useRef(null);
+  const orb2Ref = useRef(null);
+  const orb3Ref = useRef(null);
+  const actualCursorRef = useRef({ x: -999, y: -999 });
+  const orbPosRef = useRef([
+    { x: -999, y: -999 },
+    { x: -999, y: -999 },
+    { x: -999, y: -999 },
+  ]);
+  const hueRef = useRef(200);
+  const glowRafRef = useRef(null);
+
+  useEffect(() => {
+    const onMove = (e) => { actualCursorRef.current = { x: e.clientX, y: e.clientY }; };
+    window.addEventListener('mousemove', onMove);
+    return () => window.removeEventListener('mousemove', onMove);
+  }, []);
+
+  useEffect(() => {
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const speeds = [0.05, 0.09, 0.18];
+    let snapped = false;
+
+    const tick = () => {
+      const target = actualCursorRef.current;
+      if (target.x === -999) { glowRafRef.current = requestAnimationFrame(tick); return; }
+
+      if (!snapped) {
+        orbPosRef.current.forEach(d => { d.x = target.x; d.y = target.y; });
+        snapped = true;
+      }
+
+      hueRef.current = (hueRef.current + 0.6) % 360;
+      const hue = hueRef.current;
+
+      orbPosRef.current.forEach((d, i) => {
+        d.x = lerp(d.x, target.x, speeds[i]);
+        d.y = lerp(d.y, target.y, speeds[i]);
+      });
+
+      const [p1, p2, p3] = orbPosRef.current;
+      const h1 = hue, h2 = (hue + 50) % 360, h3 = (hue + 110) % 360;
+
+      if (orb1Ref.current) {
+        orb1Ref.current.style.left = p1.x + 'px';
+        orb1Ref.current.style.top = p1.y + 'px';
+        orb1Ref.current.style.background = `radial-gradient(circle, hsla(${h1},80%,65%,0.13) 0%, hsla(${h2},75%,60%,0.07) 50%, transparent 70%)`;
+      }
+      if (orb2Ref.current) {
+        orb2Ref.current.style.left = p2.x + 'px';
+        orb2Ref.current.style.top = p2.y + 'px';
+        orb2Ref.current.style.background = `radial-gradient(circle, hsla(${h2},88%,68%,0.22) 0%, hsla(${h3},80%,64%,0.10) 50%, transparent 70%)`;
+      }
+      if (orb3Ref.current) {
+        orb3Ref.current.style.left = p3.x + 'px';
+        orb3Ref.current.style.top = p3.y + 'px';
+        orb3Ref.current.style.background = `radial-gradient(circle, hsla(${h3},100%,78%,0.38) 0%, transparent 60%)`;
+      }
+
+      glowRafRef.current = requestAnimationFrame(tick);
+    };
+
+    glowRafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(glowRafRef.current);
+  }, []);
 
   useEffect(() => {
     fetch('/api/products/public')
@@ -46,6 +111,10 @@ const LandingPage = () => {
 
   return (
     <div className="min-h-screen bg-base-200">
+      {/* Flowing cursor orbs — three layers at different lerp speeds */}
+      <div ref={orb1Ref} className="pointer-events-none fixed z-[9999]" style={{ width: 440, height: 440, borderRadius: '50%', filter: 'blur(16px)', transform: 'translate(-50%, -50%)', left: -999, top: -999 }} />
+      <div ref={orb2Ref} className="pointer-events-none fixed z-[9998]" style={{ width: 180, height: 180, borderRadius: '50%', filter: 'blur(7px)', transform: 'translate(-50%, -50%)', left: -999, top: -999 }} />
+      <div ref={orb3Ref} className="pointer-events-none fixed z-[9997]" style={{ width: 55, height: 55, borderRadius: '50%', filter: 'blur(3px)', transform: 'translate(-50%, -50%)', left: -999, top: -999 }} />
       <div className="relative z-50">
         <LandingNavbar />
 

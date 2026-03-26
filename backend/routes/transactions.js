@@ -123,18 +123,42 @@ router.post('/', protect, authorize('admin', 'staff'), async (req, res) => {
       });
     }
 
-    // Create transaction
-    const transaction = await Transaction.create({
-      customer: customer || null,
-      customerName: customerName || 'Walk-in',
-      staff: req.user._id,
-      items: processedItems,
-      totalAmount,
-      paymentMethod,
-      cashReceived: cashReceived || 0,
-      changeAmount: paymentMethod === 'cash' ? Math.max(0, (cashReceived || 0) - totalAmount) : 0,
-      notes
-    });
+    // Create transaction (retry once on duplicate receipt number race condition)
+    let transaction;
+    try {
+      transaction = await Transaction.create({
+        customer: customer || null,
+        customerName: customerName || 'Walk-in',
+        staff: req.user._id,
+        items: processedItems,
+        totalAmount,
+        paymentMethod,
+        cashReceived: cashReceived || 0,
+        changeAmount: paymentMethod === 'cash' ? Math.max(0, (cashReceived || 0) - totalAmount) : 0,
+        notes
+      });
+    } catch (dupErr) {
+      if (dupErr.code === 11000 && dupErr.message.includes('receiptNumber')) {
+        // Force a new receipt number by clearing it and retrying
+        const t = new Transaction({
+          customer: customer || null,
+          customerName: customerName || 'Walk-in',
+          staff: req.user._id,
+          items: processedItems,
+          totalAmount,
+          paymentMethod,
+          cashReceived: cashReceived || 0,
+          changeAmount: paymentMethod === 'cash' ? Math.max(0, (cashReceived || 0) - totalAmount) : 0,
+          notes
+        });
+        t.receiptNumber = undefined;
+        await t.validate();
+        await t.save();
+        transaction = t;
+      } else {
+        throw dupErr;
+      }
+    }
 
     // Deduct stock for each item
     for (const item of processedItems) {

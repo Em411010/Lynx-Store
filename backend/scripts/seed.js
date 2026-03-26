@@ -135,10 +135,7 @@ const connectDB = async () => {
 // Clear database
 const clearDatabase = async () => {
   console.log('🗑️  Clearing existing data...');
-  await User.deleteMany({});
-  await Category.deleteMany({});
-  await Product.deleteMany({});
-  await Transaction.deleteMany({});
+  await mongoose.connection.dropDatabase();
   console.log('✅ Database cleared');
 };
 

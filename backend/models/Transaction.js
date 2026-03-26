@@ -84,13 +84,15 @@ transactionSchema.pre('validate', async function() {
   if (!this.receiptNumber) {
     const today = new Date();
     const dateStr = today.toISOString().slice(0,10).replace(/-/g, '');
-    const count = await mongoose.model('Transaction').countDocuments({
-      createdAt: {
-        $gte: new Date(today.getFullYear(), today.getMonth(), today.getDate()),
-        $lt: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1)
-      }
-    });
-    this.receiptNumber = `RCT-${dateStr}-${String(count + 1).padStart(4, '0')}`;
+    const prefix = `RCT-${dateStr}-`;
+    // Find the last receipt for today to avoid gaps and race-condition collisions
+    const last = await mongoose.model('Transaction')
+      .findOne({ receiptNumber: { $regex: `^${prefix}` } })
+      .sort({ receiptNumber: -1 })
+      .select('receiptNumber')
+      .lean();
+    const lastNum = last ? parseInt(last.receiptNumber.slice(prefix.length), 10) : 0;
+    this.receiptNumber = `${prefix}${String(lastNum + 1).padStart(4, '0')}`;
   }
 });
 

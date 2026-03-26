@@ -221,6 +221,45 @@ const StaffDashboard = () => {
     }
   };
 
+  const printReceiptAsPDF = (txn) => {
+    const customerName = txn.customer
+      ? `${txn.customer.firstName} ${txn.customer.lastName}`
+      : txn.customerName;
+    const staffName = txn.staff ? `${txn.staff.firstName} ${txn.staff.lastName}` : '';
+    const itemRows = txn.items.map(item => `
+      <tr>
+        <td style="padding:4px 6px;border-bottom:1px solid #eee">${item.productName}${item.isTingi ? ' <span style="font-size:10px;color:#888">(tingi)</span>' : ''}</td>
+        <td style="padding:4px 6px;border-bottom:1px solid #eee;text-align:center">${item.quantity}</td>
+        <td style="padding:4px 6px;border-bottom:1px solid #eee;text-align:right">${formatPeso(item.unitPrice)}</td>
+        <td style="padding:4px 6px;border-bottom:1px solid #eee;text-align:right;font-weight:bold">${formatPeso(item.subtotal)}</td>
+      </tr>`).join('');
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Receipt ${txn.receiptNumber}</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Courier New',monospace;font-size:12px;padding:20px;max-width:320px;margin:auto}.store-name{font-size:18px;font-weight:bold;text-align:center}.store-sub{font-size:11px;text-align:center;color:#555;margin-bottom:8px}.divider{border-top:1px dashed #999;margin:8px 0}.label{font-size:10px;color:#666}table{width:100%;border-collapse:collapse;margin:8px 0;font-size:11px}th{background:#f5f5f5;padding:4px 6px;text-align:left;font-size:10px}.total-row{font-size:14px;font-weight:bold;display:flex;justify-content:space-between;padding:6px 0}.summary-row{display:flex;justify-content:space-between;font-size:11px;padding:2px 0}.footer{text-align:center;font-size:10px;color:#888;margin-top:12px}@media print{body{padding:5px}}</style>
+</head><body>
+<div class="store-name">Lynx's Sari-sari Store</div>
+<div class="store-sub">POS and Inventory System</div>
+<div class="divider"></div>
+<div><span class="label">Receipt #: </span><strong>${txn.receiptNumber}</strong></div>
+<div><span class="label">Date: </span>${formatDateTime(txn.createdAt)}</div>
+<div><span class="label">Customer: </span>${customerName}</div>
+${staffName ? `<div><span class="label">Staff: </span>${staffName}</div>` : ''}
+<div class="divider"></div>
+<table><thead><tr><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:right">Price</th><th style="text-align:right">Subtotal</th></tr></thead><tbody>${itemRows}</tbody></table>
+<div class="divider"></div>
+<div class="total-row"><span>TOTAL:</span><span>${formatPeso(txn.totalAmount)}</span></div>
+<div class="summary-row"><span>Payment:</span><span>Cash</span></div>
+${txn.cashReceived > 0 ? `<div class="summary-row"><span>Cash Received:</span><span>${formatPeso(txn.cashReceived)}</span></div><div class="summary-row"><span>Change:</span><span>${formatPeso(txn.changeAmount || 0)}</span></div>` : ''}
+<div class="divider"></div>
+<div class="footer">Thank you for your purchase!<br>— Lynx's Sari-sari Store —</div>
+</body></html>`;
+    const win = window.open('', '_blank', 'width=420,height=650');
+    if (!win) return;
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    setTimeout(() => { win.print(); }, 300);
+  };
+
   if (!user) return null;
 
   const tabs = [
@@ -451,9 +490,14 @@ const StaffDashboard = () => {
                       <td className="hidden sm:table-cell">{p.category?.icon} {p.category?.name}</td>
                       <td className="text-[10px] md:text-sm">{formatPeso(p.unitPrice)}</td>
                       <td>
-                        <span className={`badge badge-[9px] md:badge-sm ${p.isLowStock ? 'badge-warning' : 'badge-success'}`}>
-                          {Math.floor(p.stock)}
-                        </span>
+                        <div className="flex flex-col gap-0.5">
+                          <span className={`badge badge-[9px] md:badge-sm ${p.isLowStock ? 'badge-warning' : 'badge-success'}`}>
+                            {Math.floor(p.stock)} pack{Math.floor(p.stock) !== 1 ? 's' : ''}
+                          </span>
+                          {p.tingiPerPack > 1 && (
+                            <span className="text-[9px] md:text-xs opacity-55">{Math.floor(p.stock * p.tingiPerPack)} pcs</span>
+                          )}
+                        </div>
                       </td>
                       <td className={`text-[9px] hidden md:table-cell ${p.isExpired ? 'text-error' : p.isNearExpiry ? 'text-warning' : ''}`}>
                         {p.expiryDate ? formatDate(p.expiryDate) : '-'}
@@ -546,6 +590,7 @@ const StaffDashboard = () => {
             </div>
             <div className="text-center mt-4 text-xs opacity-60">Thank you for your purchase!</div>
             <div className="modal-action">
+              <button onClick={() => printReceiptAsPDF(showReceipt)} className="btn btn-outline btn-info">🖨️ Print PDF</button>
               <button onClick={() => setShowReceipt(null)} className="btn btn-primary">OK</button>
             </div>
           </div>
@@ -643,6 +688,7 @@ const StaffDashboard = () => {
             )}
 
             <div className="modal-action">
+              <button onClick={() => printReceiptAsPDF(selectedTransaction)} className="btn btn-outline btn-info">🖨️ Print PDF</button>
               <button onClick={() => setShowTransactionModal(false)} className="btn btn-primary">Close</button>
             </div>
           </div>
